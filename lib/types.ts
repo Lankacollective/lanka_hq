@@ -1,4 +1,4 @@
-export type TabId = 'command' | 'master' | 'dashboard' | 'board' | 'assembly' | 'automations' | 'backup';
+export type TabId = 'hoy' | 'board' | 'sistema' | 'boveda';
 
 export type StickerColumnId = 'sistema' | 'tareas' | 'mercado' | 'storytelling' | 'sinResponder';
 export type TaskStatus = 'backlog' | 'today' | 'doing' | 'waiting' | 'done';

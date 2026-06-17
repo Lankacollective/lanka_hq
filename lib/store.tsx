@@ -27,6 +27,7 @@ type Store = {
   archiveAssembly: (id: string) => void;
   exportJson: () => void;
   importJson: (file: File) => Promise<void>;
+  quickAssemble: (kind: AssemblyKind) => void;
 };
 
 const Context = createContext<Store | null>(null);
@@ -196,6 +197,29 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       const text = await file.text();
       const imported = JSON.parse(text) as LankaState;
       setState({ ...defaultState, ...imported });
+    },
+    quickAssemble(kind) {
+      setState(s => {
+        const selected = s.stickers.filter(st => st.selected);
+        if (!selected.length) return s;
+        const title = selected[0]?.title ?? `Nuevo ${kind}`;
+        const body = selected.map(st => `- ${st.title}${st.note ? `\n  Nota: ${st.note}` : ''}`).join('\n');
+        const deselected = s.stickers.map(st => st.selected ? { ...st, selected: false, updatedAt: now() } : st);
+        if (kind === 'Tarea') {
+          return {
+            ...s,
+            tasks: [{ id: uid('task'), title, status: 'today' as const, owner: 'Paola' as const, priority: 'Alta' as const, source: 'Sticker → Tarea', done: false, createdAt: now(), updatedAt: now() }, ...s.tasks],
+            stickers: deselected,
+            activity: [`Tarea: ${title}`, ...s.activity].slice(0, 50),
+          };
+        }
+        return {
+          ...s,
+          assemblies: [{ id: uid('asm'), stickerIds: selected.map(st => st.id), kind, title, body, status: 'draft' as const, createdAt: now(), updatedAt: now() }, ...s.assemblies],
+          stickers: deselected,
+          activity: [`${kind}: ${title}`, ...s.activity].slice(0, 50),
+        };
+      });
     },
   }), [state, loaded]);
 
