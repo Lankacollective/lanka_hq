@@ -5,10 +5,44 @@ import { defaultState } from './defaultState';
 import { supabase, WORKSPACE_ID } from './supabase';
 import type { AssemblyKind, LankaState, Owner, Priority, StickerColumnId, TaskStatus } from './types';
 
-const STORAGE_KEY = 'LANKA_HQ_NEXT_V2';
+const STORAGE_KEY     = 'LANKA_HQ_NEXT_V2';
+const STORAGE_KEY_BAK = 'LANKA_HQ_NEXT_V2_BAK'; // copia de seguridad local secundaria
 
 const uid = (prefix: string) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 const now = () => new Date().toISOString();
+
+// Un estado "tiene contenido" si el usuario creó al menos un ítem.
+// Previene que el estado vacío/por-defecto sobreescriba datos reales en Supabase.
+function hasContent(s: Partial<LankaState> | null | undefined): boolean {
+  if (!s) return false;
+  return (s.stickers?.length ?? 0) > 0 ||
+         (s.tasks?.length    ?? 0) > 0 ||
+         (s.assemblies?.length ?? 0) > 0 ||
+         (s.vault?.length    ?? 0) > 0;
+}
+
+// Intenta cargar desde localStorage (primero la key principal, luego el backup).
+// Devuelve null si no hay datos reales — nunca devuelve defaultState.
+function loadLocal(): LankaState | null {
+  if (typeof window === 'undefined') return null;
+  for (const key of [STORAGE_KEY, STORAGE_KEY_BAK]) {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) continue;
+    try {
+      const parsed = JSON.parse(raw) as Partial<LankaState>;
+      if (hasContent(parsed)) return { ...defaultState, ...parsed };
+    } catch {}
+  }
+  return null;
+}
+
+function saveLocal(s: LankaState) {
+  try {
+    const json = JSON.stringify(s);
+    window.localStorage.setItem(STORAGE_KEY, json);
+    if (hasContent(s)) window.localStorage.setItem(STORAGE_KEY_BAK, json); // solo sobreescribe backup si hay contenido
+  } catch {}
+}
 
 type Store = {
   state: LankaState;
@@ -28,23 +62,20 @@ type Store = {
   exportJson: () => void;
   importJson: (file: File) => Promise<void>;
   quickAssemble: (kind: AssemblyKind) => void;
+  forceSyncToCloud: () => void;
 };
 
 const Context = createContext<Store | null>(null);
 
-function loadLocalFallback(): LankaState {
-  if (typeof window === 'undefined') return defaultState;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return defaultState;
-  try { return { ...defaultState, ...JSON.parse(raw) } as LankaState; } catch { return defaultState; }
-}
-
 export function LankaProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<LankaState>(defaultState);
   const [loaded, setLoaded] = useState(false);
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // supabaseOk = Supabase respondió correctamente (incluso si no había fila).
+  // Cuando es false no escribimos a Supabase para evitar borrar datos reales.
+  const supabaseOk = useRef(false);
 
-  // Carga inicial desde Supabase, fallback a localStorage
+  // ── Carga inicial ────────────────────────────────────────────────────────────
   useEffect(() => {
     supabase
       .from('lanka_db')
@@ -52,10 +83,31 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       .eq('id', WORKSPACE_ID)
       .single()
       .then(({ data, error }) => {
-        if (!error && data?.data && Object.keys(data.data).length > 0) {
-          setState({ ...defaultState, ...(data.data as LankaState) });
+        // Supabase respondió (aunque no haya fila): la conexión existe
+        if (!error || (error as { code?: string }).code === 'PGRST116') {
+          supabaseOk.current = true;
+        }
+
+        if (!error && data?.data && hasContent(data.data as Partial<LankaState>)) {
+          // ✅ Cloud tiene datos reales — úsalos y espéjalos en ambos backups locales
+          const cloud = { ...defaultState, ...(data.data as LankaState) };
+          setState(cloud);
+          saveLocal(cloud);
         } else {
-          setState(loadLocalFallback());
+          // ⚠️ Cloud vacío o error de red — intenta localStorage
+          const local = loadLocal();
+          if (local) {
+            setState(local);
+            // Si Supabase está alcanzable pero sin datos, restáuralo desde local
+            if (supabaseOk.current) {
+              supabase.from('lanka_db')
+                .upsert({ id: WORKSPACE_ID, data: local, updated_at: now(), updated_by: 'restore' })
+                .then(() => undefined);
+            }
+          } else {
+            // Inicio limpio: no hay datos en ningún lado
+            setState(defaultState);
+          }
         }
         setLoaded(true);
       });
@@ -63,38 +115,60 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined);
   }, []);
 
-  // Suscripción Realtime — sincroniza cambios de Mathias en tiempo real
+  // ── Realtime ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     const channel = supabase
       .channel('workspace')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'lanka_db', filter: `id=eq.${WORKSPACE_ID}` }, payload => {
-        if (payload.new?.data) setState(s => ({ ...s, ...(payload.new.data as LankaState) }));
-      })
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'lanka_db', filter: `id=eq.${WORKSPACE_ID}` },
+        payload => {
+          if (!payload.new?.data) return;
+          const incoming = payload.new.data as LankaState;
+          setState(s => {
+            // 🛡️ Rechazar si el update entrante vaciaría datos que ya existen
+            if (hasContent(s) && !hasContent(incoming)) {
+              console.warn('[Lanka HQ] Realtime: ignorado update vacío — datos actuales protegidos');
+              return s;
+            }
+            return { ...s, ...incoming };
+          });
+        }
+      )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Guarda en Supabase con debounce de 1.5s + mantiene localStorage como caché local
+  // ── Guardado ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!loaded) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+    // 1. Siempre guardar en localStorage (doble copia si hay contenido)
+    saveLocal(state);
+
+    // 2. Solo guardar en Supabase si confirmamos que está alcanzable
+    //    Esto previene sobrescribir datos reales con estado vacío en caso de fallo de red
+    if (!supabaseOk.current) return;
+
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
       supabase
         .from('lanka_db')
-        .upsert({ id: WORKSPACE_ID, data: state, updated_at: new Date().toISOString(), updated_by: 'app' })
+        .upsert({ id: WORKSPACE_ID, data: state, updated_at: now(), updated_by: 'app' })
         .then(() => undefined);
     }, 1500);
   }, [state, loaded]);
 
+  // ── Store ────────────────────────────────────────────────────────────────────
   const store = useMemo<Store>(() => ({
     state,
     setState,
     updateStrategy(field, value) {
-      setState(s => ({ ...s, strategy: { ...s.strategy, [field]: value }, activity: [`Actualizado Master OS: ${field}`, ...s.activity].slice(0, 50) }));
+      setState(s => ({ ...s, strategy: { ...s.strategy, [field]: value }, activity: [`Master OS: ${field}`, ...s.activity].slice(0, 50) }));
     },
     addSticker(columnId, title) {
       if (!title.trim()) return;
+      supabaseOk.current = true; // primera acción del usuario → habilitar sync
       setState(s => ({ ...s, stickers: [{ id: uid('st'), columnId, title: title.trim(), note: '', selected: false, createdAt: now(), updatedAt: now() }, ...s.stickers] }));
     },
     updateSticker(id, patch) {
@@ -110,16 +184,12 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       setState(s => {
         const selectedIds = s.stickers.filter(st => st.selected).map(st => st.id);
         const merged = Array.from(new Set([...s.assemblyQueue, ...selectedIds]));
-        return {
-          ...s,
-          assemblyQueue: merged,
-          stickers: s.stickers.map(st => selectedIds.includes(st.id) ? { ...st, selected: false, updatedAt: now() } : st),
-          activity: [`${selectedIds.length} stickers enviados a ensamblaje`, ...s.activity].slice(0, 50),
-        };
+        return { ...s, assemblyQueue: merged, stickers: s.stickers.map(st => selectedIds.includes(st.id) ? { ...st, selected: false, updatedAt: now() } : st), activity: [`${selectedIds.length} stickers → ensamblaje`, ...s.activity].slice(0, 50) };
       });
     },
     addTask(title, opts = {}) {
       if (!title.trim()) return;
+      supabaseOk.current = true;
       setState(s => ({
         ...s,
         tasks: [{ id: uid('task'), title: title.trim(), status: opts.status ?? 'backlog', owner: opts.owner ?? 'Paola', priority: opts.priority ?? 'Media', reminderAt: opts.reminderAt, source: opts.source, done: false, createdAt: now(), updatedAt: now() }, ...s.tasks],
@@ -134,29 +204,8 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         const stickers = s.stickers.filter(st => s.assemblyQueue.includes(st.id));
         if (!stickers.length) return s;
         const title = stickers[0]?.title ?? `Nuevo ${kind}`;
-        const body = [
-          `Tipo: ${kind}`,
-          '',
-          'Stickers fuente:',
-          ...stickers.map(st => `- ${st.title}${st.note ? `\n  Nota: ${st.note}` : ''}`),
-          '',
-          'Borrador:',
-          kind === 'Contenido'
-            ? 'Hook:\n\nCuerpo:\n\nCTA:'
-            : kind === 'Tarea'
-              ? 'Resultado esperado:\n\nSiguiente acción:\n\nResponsable:'
-              : kind === 'Decisión'
-                ? 'Decisión propuesta:\n\nPor qué importa:\n\nFecha de revisión:'
-                : kind === 'Sistema'
-                  ? 'Sistema a construir:\n\nInputs:\n\nOutputs:\n\nRitual de uso:'
-                  : 'Prompt/brief para IA:\n\nContexto:\n\nObjetivo:\n\nFormato de salida:',
-        ].join('\n');
-        return {
-          ...s,
-          assemblyQueue: [],
-          assemblies: [{ id: uid('asm'), stickerIds: stickers.map(st => st.id), kind, title, body, status: 'draft', createdAt: now(), updatedAt: now() }, ...s.assemblies],
-          activity: [`Ensamblado como ${kind}: ${title}`, ...s.activity].slice(0, 50),
-        };
+        const body = ['Stickers fuente:', ...stickers.map(st => `- ${st.title}${st.note ? `\n  Nota: ${st.note}` : ''}`)].join('\n');
+        return { ...s, assemblyQueue: [], assemblies: [{ id: uid('asm'), stickerIds: stickers.map(st => st.id), kind, title, body, status: 'draft', createdAt: now(), updatedAt: now() }, ...s.assemblies], activity: [`${kind}: ${title}`, ...s.activity].slice(0, 50) };
       });
     },
     updateAssembly(id, patch) {
@@ -166,22 +215,14 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       setState(s => {
         const a = s.assemblies.find(x => x.id === id);
         if (!a) return s;
-        return {
-          ...s,
-          tasks: [{ id: uid('task'), title: a.title, status: 'backlog', owner: 'Paola', priority: 'Alta', source: `assembly:${a.id}`, done: false, createdAt: now(), updatedAt: now() }, ...s.tasks],
-          assemblies: s.assemblies.map(x => x.id === id ? { ...x, status: 'ticket', updatedAt: now() } : x),
-        };
+        return { ...s, tasks: [{ id: uid('task'), title: a.title, status: 'backlog', owner: 'Paola', priority: 'Alta', source: `assembly:${a.id}`, done: false, createdAt: now(), updatedAt: now() }, ...s.tasks], assemblies: s.assemblies.map(x => x.id === id ? { ...x, status: 'ticket', updatedAt: now() } : x) };
       });
     },
     archiveAssembly(id) {
       setState(s => {
         const a = s.assemblies.find(x => x.id === id);
         if (!a) return s;
-        return {
-          ...s,
-          assemblies: s.assemblies.filter(x => x.id !== id),
-          vault: [{ id: uid('vault'), title: a.title, kind: a.kind, body: a.body, result: 'Archivado desde Ensamblaje', lesson: '', rating: 0, createdAt: now() }, ...s.vault],
-        };
+        return { ...s, assemblies: s.assemblies.filter(x => x.id !== id), vault: [{ id: uid('vault'), title: a.title, kind: a.kind, body: a.body, result: 'Archivado', lesson: '', rating: 0, createdAt: now() }, ...s.vault] };
       });
     },
     exportJson() {
@@ -196,6 +237,8 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
     async importJson(file) {
       const text = await file.text();
       const imported = JSON.parse(text) as LankaState;
+      if (!hasContent(imported)) throw new Error('El archivo importado parece estar vacío.');
+      supabaseOk.current = true;
       setState({ ...defaultState, ...imported });
     },
     quickAssemble(kind) {
@@ -206,20 +249,16 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         const body = selected.map(st => `- ${st.title}${st.note ? `\n  Nota: ${st.note}` : ''}`).join('\n');
         const deselected = s.stickers.map(st => st.selected ? { ...st, selected: false, updatedAt: now() } : st);
         if (kind === 'Tarea') {
-          return {
-            ...s,
-            tasks: [{ id: uid('task'), title, status: 'today' as const, owner: 'Paola' as const, priority: 'Alta' as const, source: 'Sticker → Tarea', done: false, createdAt: now(), updatedAt: now() }, ...s.tasks],
-            stickers: deselected,
-            activity: [`Tarea: ${title}`, ...s.activity].slice(0, 50),
-          };
+          return { ...s, tasks: [{ id: uid('task'), title, status: 'today' as const, owner: 'Paola' as const, priority: 'Alta' as const, source: 'Sticker → Tarea', done: false, createdAt: now(), updatedAt: now() }, ...s.tasks], stickers: deselected, activity: [`Tarea: ${title}`, ...s.activity].slice(0, 50) };
         }
-        return {
-          ...s,
-          assemblies: [{ id: uid('asm'), stickerIds: selected.map(st => st.id), kind, title, body, status: 'draft' as const, createdAt: now(), updatedAt: now() }, ...s.assemblies],
-          stickers: deselected,
-          activity: [`${kind}: ${title}`, ...s.activity].slice(0, 50),
-        };
+        return { ...s, assemblies: [{ id: uid('asm'), stickerIds: selected.map(st => st.id), kind, title, body, status: 'draft' as const, createdAt: now(), updatedAt: now() }, ...s.assemblies], stickers: deselected, activity: [`${kind}: ${title}`, ...s.activity].slice(0, 50) };
       });
+    },
+    forceSyncToCloud() {
+      supabaseOk.current = true;
+      supabase.from('lanka_db')
+        .upsert({ id: WORKSPACE_ID, data: state, updated_at: now(), updated_by: 'forced' })
+        .then(() => undefined);
     },
   }), [state, loaded]);
 
