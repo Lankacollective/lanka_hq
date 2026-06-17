@@ -4,14 +4,14 @@ export function SectionTitle({ eyebrow, title, subtitle }: { eyebrow: string; ti
   return (
     <div className="mb-6 border-b border-black/15 pb-4">
       <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--muted)]">{eyebrow}</p>
-      <h2 className="mt-2 text-3xl font-black uppercase tracking-[-0.04em] md:text-4xl">{title}</h2>
-      {subtitle && <p className="mt-2 max-w-3xl text-sm text-[var(--muted)]">{subtitle}</p>}
+      <h2 className="mt-2 text-5xl uppercase md:text-6xl" style={{ fontFamily: 'var(--display)', lineHeight: 0.92, letterSpacing: '-0.02em' }}>{title}</h2>
+      {subtitle && <p className="mt-3 max-w-3xl text-sm text-[var(--muted)]">{subtitle}</p>}
     </div>
   );
 }
 
 export function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`border border-black/15 bg-white/70 p-4 shadow-sm ${className}`}>{children}</div>;
+  return <div className={`border border-[var(--line)] bg-white p-4 ${className}`}>{children}</div>;
 }
 
 export function Button({ children, onClick, variant = 'dark', type = 'button' }: { children: React.ReactNode; onClick?: () => void; variant?: 'dark' | 'light' | 'terra'; type?: 'button' | 'submit' }) {

@@ -37,24 +37,24 @@ export function Shell() {
   return (
     <LankaProvider>
       <main className="min-h-screen bg-[var(--bone)] text-[var(--ink)]">
-        <header className="border-b-4 border-[var(--ink)] px-5 py-8 md:px-12 md:py-10">
-          <div className="grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
+        <header className="border-b-2 border-[var(--ink)] px-5 py-5 md:px-6 md:py-4" style={{ backdropFilter: 'blur(10px)' }}>
+          <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
             <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-[var(--muted)]">Lanka Collective · Stack Definitivo</p>
-              <h1 className="mt-2 text-5xl font-black uppercase leading-none tracking-[-0.06em] md:text-7xl">LANKA<br /><span className="text-[var(--terra)]">HQ</span></h1>
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">Lanka Collective · HQ Integrado</p>
+              <h1 className="mt-1 uppercase" style={{ fontFamily: 'var(--display)', fontSize: 'clamp(38px, 6vw, 52px)', lineHeight: 0.9, letterSpacing: '-0.02em' }}>LANKA <span className="text-[var(--terra)]" style={{ fontStyle: 'italic' }}>HQ</span></h1>
             </div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--muted)] md:text-right">
-              Next.js · Tailwind · Estado Central<br />Stickers → Ensamblaje → Bóveda<br />Recordatorios server-ready
+            <div className="font-mono text-[10px] text-[var(--muted)] md:text-right" style={{ lineHeight: 1.8 }}>
+              v1.3 · stickers → ensamblaje → bóveda<br />Supabase sync · Next.js
             </div>
           </div>
         </header>
 
-        <nav className="sticky top-0 z-20 flex gap-0 overflow-x-auto border-b border-black/15 bg-[var(--bone)] px-4 md:px-12 no-scrollbar">
+        <nav className="sticky top-0 z-20 flex gap-0 overflow-x-auto border-b-2 border-[var(--ink)] bg-[var(--bone)] px-5 no-scrollbar" style={{ backdropFilter: 'blur(10px)', background: 'rgba(235,233,228,.97)' }}>
           {tabs.map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`whitespace-nowrap border-b-2 px-4 py-4 font-mono text-[10px] uppercase tracking-[0.16em] transition ${tab === t.id ? 'border-[var(--ink)] text-[var(--ink)]' : 'border-transparent text-[var(--muted)] hover:text-[var(--ink)]'}`}
+              className={`whitespace-nowrap border-b-[3px] border-r border-r-[var(--line)] px-4 py-[13px] font-mono text-[10px] uppercase tracking-[0.08em] transition ${tab === t.id ? 'border-b-[var(--terra)] bg-white/55 text-[var(--ink)]' : 'border-b-transparent text-[var(--muted)] hover:border-b-[var(--terra)] hover:bg-white/55 hover:text-[var(--ink)]'}`}
             >
               {t.label}
             </button>
