@@ -80,6 +80,12 @@ function TaskRow({ task, depth = 0 }: { task: Task; depth?: number }) {
                 <>
                   <span>·</span>
                   <span>{subtasks.filter(s => s.done).length}/{subtasks.length} subtareas</span>
+                  <div className="inline-flex h-1.5 w-12 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full bg-[var(--acid)] transition-all"
+                      style={{ width: `${Math.round(subtasks.filter(s => s.done).length / subtasks.length * 100)}%` }}
+                    />
+                  </div>
                 </>
               )}
             </div>
@@ -238,14 +244,35 @@ export function Hoy() {
   const { state, setState } = useLanka();
   const today = new Date().toISOString().slice(0, 10);
 
-  const activeTasks = state.tasks.filter(t => !t.done);
+  const showDone = state.config.showDoneTasksInHoy;
+  const visibleTasks = state.tasks.filter(t => showDone ? true : !t.done);
+  const activeTasks = visibleTasks.filter(t => !t.done);
   const overdueTasks = activeTasks.filter(t => t.dueAt && t.dueAt < today);
   const dateLabel = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  // Tasks visible in Hoy: all non-done tasks (by owner)
+  const priorityOrder: Record<string, number> = { Alta: 0, Media: 1, Baja: 2 };
+
+  function sortTasks(tasks: Task[]): Task[] {
+    return [...tasks].sort((a, b) => {
+      // Overdue first
+      const aOver = !a.done && a.dueAt && a.dueAt < today ? 0 : 1;
+      const bOver = !b.done && b.dueAt && b.dueAt < today ? 0 : 1;
+      if (aOver !== bOver) return aOver - bOver;
+      // Then by priority
+      const pDiff = (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1);
+      if (pDiff !== 0) return pDiff;
+      // Then by dueAt (nearest first)
+      if (a.dueAt && b.dueAt) return a.dueAt.localeCompare(b.dueAt);
+      if (a.dueAt) return -1;
+      if (b.dueAt) return 1;
+      return 0;
+    });
+  }
+
+  // Tasks visible in Hoy: non-done root tasks by owner, sorted
   const tasksByOwner = OWNERS.map(owner => ({
     owner,
-    tasks: activeTasks.filter(t => t.owner === owner),
+    tasks: sortTasks(visibleTasks.filter(t => t.owner === owner)),
   })).filter(g => g.tasks.length > 0);
 
   return (

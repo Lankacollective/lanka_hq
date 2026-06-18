@@ -60,11 +60,11 @@ function ShellContent({ tab, setTab }: { tab: TabId; setTab: (t: TabId) => void 
               value={capture}
               onChange={e => setCapture(e.target.value)}
               placeholder="Captura rápida..."
-              className="min-w-0 flex-1 border border-[var(--line)] bg-[var(--surface)] px-3 py-2 font-mono text-[11px] text-[var(--ink)] outline-none focus:border-[var(--ink2)]"
+              className="min-w-0 flex-1 border border-[var(--line)] bg-[var(--surface)] px-3 py-2 font-mono text-[11px] text-[var(--ink)] outline-none focus:border-[var(--acid)]"
             />
             <button
               type="submit"
-              className="flex-shrink-0 border border-[var(--ink2)] bg-[var(--ink2)] px-3 py-2 font-mono text-[10px] font-bold uppercase text-black"
+              className="flex-shrink-0 border border-[var(--acid)] bg-[var(--acid)] px-3 py-2 font-mono text-[10px] font-bold uppercase text-black"
             >
               ↵
             </button>
@@ -82,7 +82,7 @@ function ShellContent({ tab, setTab }: { tab: TabId; setTab: (t: TabId) => void 
             onClick={() => setTab(t.id)}
             className={`whitespace-nowrap border-b-[3px] border-r border-r-[var(--line)] px-4 py-[13px] font-mono text-[10px] uppercase tracking-[0.08em] transition ${
               tab === t.id
-                ? 'border-b-[var(--ink2)] text-[var(--ink)]'
+                ? 'border-b-[var(--acid)] text-[var(--ink)]'
                 : 'border-b-transparent text-[var(--muted)] hover:border-b-[var(--terra)] hover:text-[var(--ink)]'
             }`}
           >

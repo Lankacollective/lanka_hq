@@ -58,6 +58,11 @@ function AddSticker({ columnId }: { columnId: StickerColumnId }) {
 export function Board() {
   const { state, updateSticker, deleteSticker, toggleSticker, addTask, updateTask, deleteTask } = useLanka();
   const [expandedTask, setExpandedTask] = useState<string | null>(null);
+  const [tagFilters, setTagFilters] = useState<Record<string, string>>({});
+
+  function toggleTagFilter(colId: string, tag: string) {
+    setTagFilters(f => ({ ...f, [colId]: f[colId] === tag ? '' : tag }));
+  }
 
   return (
     <div>
@@ -70,7 +75,10 @@ export function Board() {
       {/* ── Sticker columns ── */}
       <div className="mb-10 flex gap-4 overflow-x-auto pb-4">
         {cols.map(col => {
-          const colStickers = state.stickers.filter(s => s.columnId === col.id);
+          const activeTag = tagFilters[col.id] ?? '';
+          const colStickers = state.stickers
+            .filter(s => s.columnId === col.id)
+            .filter(s => !activeTag || s.tag === activeTag);
           const tags = COLUMN_TAGS[col.id];
 
           return (
@@ -87,6 +95,24 @@ export function Board() {
                     {col.role} · {colStickers.length}
                   </div>
                 </div>
+              </div>
+
+              {/* Tag filters */}
+              <div className="mt-1 flex flex-wrap gap-1">
+                {tags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTagFilter(col.id, tag)}
+                    className="rounded-full px-2 py-[2px] font-mono text-[8px] uppercase tracking-[0.06em] transition"
+                    style={{
+                      background: activeTag === tag ? col.header : 'rgba(255,255,255,0.08)',
+                      color: activeTag === tag ? col.headerText : 'rgba(255,255,255,0.45)',
+                      border: '1px solid ' + (activeTag === tag ? col.header : 'rgba(255,255,255,0.12)'),
+                    }}
+                  >
+                    {tag}
+                  </button>
+                ))}
               </div>
 
               <AddSticker columnId={col.id} />
