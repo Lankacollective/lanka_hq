@@ -5,11 +5,13 @@ import { MasterOS } from '@/modules/master-os/MasterOS';
 import { Dashboard } from '@/modules/dashboard/Dashboard';
 import { Automations } from '@/modules/automations/Automations';
 import { Backup } from '@/modules/automations/Backup';
+import { MarcaPersonal } from './MarcaPersonal';
 
-type SubTab = 'master' | 'metricas' | 'auto' | 'backup';
+type SubTab = 'master' | 'marca' | 'metricas' | 'auto' | 'backup';
 
 const subTabs: Array<{ id: SubTab; label: string }> = [
   { id: 'master',   label: 'Master OS' },
+  { id: 'marca',    label: 'Marca Personal' },
   { id: 'metricas', label: 'Métricas' },
   { id: 'auto',     label: 'Automatizaciones' },
   { id: 'backup',   label: 'Backup' },
@@ -31,6 +33,7 @@ export function Sistema() {
         ))}
       </div>
       {sub === 'master'   && <MasterOS />}
+      {sub === 'marca'    && <MarcaPersonal />}
       {sub === 'metricas' && <Dashboard />}
       {sub === 'auto'     && <Automations />}
       {sub === 'backup'   && <Backup />}
