@@ -46,6 +46,7 @@ export function AssemblyBar({ onNavigate }: { onNavigate: (tab: TabId) => void }
             tag:      s.tag,
             columnId: s.columnId,
           })),
+          model:    state.config.aiModel,
           strategy: state.strategy,
           today:    new Date().toISOString().slice(0, 10),
         }),

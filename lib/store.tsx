@@ -3,8 +3,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { defaultState } from './defaultState';
 import { supabase, WORKSPACE_ID } from './supabase';
-import type { AssemblyKind, ClientCase, LankaState, Owner, Priority, StickerColumnId, Task, TaskStatus, VaultItem, WorkspaceConfig } from './types';
-import { DEFAULT_CONFIG } from './types';
+import type { AssemblyKind, ClientCase, LankaState, ModeloSection, Owner, Priority, RoadmapItem, StickerColumnId, Task, TaskStatus, VaultItem, WorkspaceConfig } from './types';
+import { DEFAULT_CONFIG, MODELO_INDEX } from './types';
 import type { GeneratedTask } from '@/app/api/generate-tasks/route';
 
 const STORAGE_KEY = 'LANKA_HQ_NEXT_V2';
@@ -87,6 +87,17 @@ function rowToVault(row: Row) {
   };
 }
 
+// Merges canonical index (titles/desc) with saved content — adds new sections if index grows
+function mergeModelo(saved: ModeloSection[] | null): ModeloSection[] {
+  const map = new Map((saved ?? []).map(s => [s.key, s]));
+  return MODELO_INDEX.map(canonical => {
+    const existing = map.get(canonical.key);
+    return existing
+      ? { ...existing, title: canonical.title, description: canonical.description }
+      : { id: `mod_${canonical.key}`, key: canonical.key, index: canonical.index, title: canonical.title, description: canonical.description, content: '', status: 'pendiente' as const, publicParticipation: false, internalNotes: '', stickerIds: [], updatedAt: new Date().toISOString() };
+  });
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowToCase(row: Record<string, any>): ClientCase {
   return {
@@ -122,7 +133,9 @@ async function seedDB(s: LankaState) {
     mission: s.strategy.mission,
     current_focus: s.strategy.currentFocus,
     kpis: s.kpis,
-    config: s.config ?? DEFAULT_CONFIG,
+    config:  s.config ?? DEFAULT_CONFIG,
+    modelo:  s.modelo ?? [],
+    roadmap: s.roadmap ?? [],
     updated_at: now(),
   });
 
@@ -208,6 +221,8 @@ async function loadFromDB(): Promise<LankaState | null> {
       },
       config:        ws.config ? { ...DEFAULT_CONFIG, ...(ws.config as Partial<WorkspaceConfig>) } : DEFAULT_CONFIG,
       kpis:          ws.kpis ?? defaultState.kpis,
+      modelo:        mergeModelo(ws.modelo as ModeloSection[] | null),
+      roadmap:       (ws.roadmap as RoadmapItem[] | null) ?? defaultState.roadmap,
       stickers:      (stRes.data   ?? []).map(r => rowToSticker(r)),
       tasks:         (taskRes.data ?? []).map(rowToTask),
       assemblies:    (asmRes.data  ?? []).map(rowToAssembly),
@@ -245,6 +260,9 @@ type Store = {
   addCase: (patch: Partial<ClientCase>) => void;
   updateCase: (id: string, patch: Partial<ClientCase>) => void;
   deleteCase: (id: string) => void;
+  updateModeloSection: (key: string, patch: Partial<ModeloSection>) => void;
+  updateRoadmapItem: (id: string, patch: Partial<RoadmapItem>) => void;
+  addRoadmapItem: (patch: Partial<RoadmapItem>) => void;
   exportJson: () => void;
   importJson: (file: File) => Promise<void>;
   quickAssemble: (kind: AssemblyKind) => void;
@@ -298,11 +316,13 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         current_focus: state.strategy.currentFocus,
         kpis:          state.kpis,
         config:        state.config,
+        modelo:        state.modelo,
+        roadmap:       state.roadmap,
         updated_at:    now(),
       }).then(() => undefined);
     }, 1500);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.strategy, state.kpis, state.config, loaded]);
+  }, [state.strategy, state.kpis, state.config, state.modelo, state.roadmap, loaded]);
 
   // ── Realtime: per-table subscriptions ───────────────────────────────────────
   useEffect(() => {
@@ -567,6 +587,35 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         }).then(() => undefined);
         return { ...s, assemblies: [a, ...s.assemblies], stickers: deselected };
       });
+    },
+
+    updateModeloSection(key, patch) {
+      setState(s => ({
+        ...s,
+        modelo: s.modelo.map(sec => sec.key === key ? { ...sec, ...patch, updatedAt: now() } : sec),
+      }));
+      // workspace sync via debounce on state.modelo change
+    },
+
+    updateRoadmapItem(id, patch) {
+      setState(s => ({
+        ...s,
+        roadmap: s.roadmap.map(r => r.id === id ? { ...r, ...patch, updatedAt: now() } : r),
+      }));
+    },
+
+    addRoadmapItem(patch) {
+      const item: RoadmapItem = {
+        id: uid('r'),
+        title: patch.title ?? 'Nueva tarea pendiente',
+        description: patch.description ?? '',
+        category: patch.category ?? 'UX',
+        status: patch.status ?? 'pendiente',
+        priority: patch.priority ?? 'Media',
+        notes: patch.notes ?? '',
+        updatedAt: now(),
+      };
+      setState(s => ({ ...s, roadmap: [...s.roadmap, item] }));
     },
 
     addCase(patch) {

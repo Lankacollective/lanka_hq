@@ -11,7 +11,11 @@ export type GeneratedTask = {
   subtasks: string[];
 };
 
+type AllowedModel = 'claude-haiku-4-5-20251001' | 'claude-sonnet-4-6';
+const ALLOWED_MODELS: AllowedModel[] = ['claude-haiku-4-5-20251001', 'claude-sonnet-4-6'];
+
 type RequestBody = {
+  model?: AllowedModel;
   stickers: Array<{ title: string; note: string; tag: string; columnId: string }>;
   strategy: { hypothesis: string; mission: string; currentFocus: string };
   today: string; // YYYY-MM-DD
@@ -20,6 +24,10 @@ type RequestBody = {
 export async function POST(req: NextRequest) {
   const body: RequestBody = await req.json();
   const { stickers, strategy, today } = body;
+  // Validate model against allowlist — never trust client input blindly
+  const model: AllowedModel = ALLOWED_MODELS.includes(body.model as AllowedModel)
+    ? (body.model as AllowedModel)
+    : 'claude-haiku-4-5-20251001';
 
   if (!stickers?.length) {
     return NextResponse.json({ error: 'No stickers provided' }, { status: 400 });
@@ -72,7 +80,7 @@ Responde ÚNICAMENTE con un JSON válido (sin markdown, sin explicación, sin co
 
   try {
     const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model,
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     });
