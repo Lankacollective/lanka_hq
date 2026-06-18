@@ -1,10 +1,12 @@
 import type { LankaState } from './types';
+import { DEFAULT_CONFIG } from './types';
 
 const now = () => new Date().toISOString();
 const id = (prefix: string) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 
 export const defaultState: LankaState = {
   version: 2,
+  config: DEFAULT_CONFIG,
   strategy: {
     hypothesis: 'Lanka convierte experiencia F&B real + IA + criterio estético en sistemas operativos rentables para negocios gastronómicos.',
     mission: 'Diseñar infraestructura estratégica, operativa y narrativa para convertir caos F&B en margen, cultura y ejecución medible.',

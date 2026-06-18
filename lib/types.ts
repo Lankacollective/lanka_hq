@@ -1,4 +1,4 @@
-export type TabId = 'hoy' | 'board' | 'sistema' | 'boveda';
+export type TabId = 'hoy' | 'board' | 'sistema' | 'boveda' | 'config';
 
 export type StickerColumnId = 'sistema' | 'tareas' | 'mercado' | 'storytelling' | 'sinResponder';
 export type TaskStatus = 'backlog' | 'today' | 'doing' | 'waiting' | 'done';
@@ -98,6 +98,28 @@ export type Reminder = {
   createdAt: string;
 };
 
+export type WorkspaceConfig = {
+  workspaceName: string;
+  owners: Owner[];
+  defaultOwner: Owner;
+  defaultPriority: Priority;
+  defaultTaskStatus: TaskStatus;
+  showDoneTasksInHoy: boolean;
+  boardCompactMode: boolean;
+  aiModel: 'claude-haiku-4-5-20251001' | 'claude-sonnet-4-6';
+};
+
+export const DEFAULT_CONFIG: WorkspaceConfig = {
+  workspaceName: 'Lanka HQ',
+  owners: ['Paola', 'Mathias', 'Ambos', 'IA'],
+  defaultOwner: 'Paola',
+  defaultPriority: 'Media',
+  defaultTaskStatus: 'today',
+  showDoneTasksInHoy: false,
+  boardCompactMode: false,
+  aiModel: 'claude-haiku-4-5-20251001',
+};
+
 export type LankaState = {
   version: 2;
   strategy: {
@@ -105,6 +127,7 @@ export type LankaState = {
     mission: string;
     currentFocus: string;
   };
+  config: WorkspaceConfig;
   stickers: Sticker[];
   tasks: Task[];
   kpis: Kpi[];

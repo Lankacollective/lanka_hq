@@ -8,18 +8,21 @@ import { Board } from '@/modules/board/Board';
 import { Sistema } from '@/modules/sistema/Sistema';
 import { Boveda } from '@/modules/boveda/Boveda';
 import { AssemblyBar } from '@/components/AssemblyBar';
+import { Config } from '@/modules/config/Config';
 
 const tabs: Array<{ id: TabId; label: string }> = [
   { id: 'hoy',     label: '01 · Hoy' },
   { id: 'board',   label: '02 · Board' },
   { id: 'sistema', label: '03 · Sistema' },
   { id: 'boveda',  label: '04 · Bóveda' },
+  { id: 'config',  label: '⚙ Config' },
 ];
 
 function Active({ tab }: { tab: TabId }) {
   if (tab === 'hoy')     return <Hoy />;
   if (tab === 'board')   return <Board />;
   if (tab === 'sistema') return <Sistema />;
+  if (tab === 'config')  return <Config />;
   return <Boveda />;
 }
 

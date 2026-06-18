@@ -3,7 +3,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { defaultState } from './defaultState';
 import { supabase, WORKSPACE_ID } from './supabase';
-import type { AssemblyKind, LankaState, Owner, Priority, StickerColumnId, Task, TaskStatus, VaultItem } from './types';
+import type { AssemblyKind, LankaState, Owner, Priority, StickerColumnId, Task, TaskStatus, VaultItem, WorkspaceConfig } from './types';
+import { DEFAULT_CONFIG } from './types';
 import type { GeneratedTask } from '@/app/api/generate-tasks/route';
 
 const STORAGE_KEY = 'LANKA_HQ_NEXT_V2';
@@ -95,6 +96,7 @@ async function seedDB(s: LankaState) {
     mission: s.strategy.mission,
     current_focus: s.strategy.currentFocus,
     kpis: s.kpis,
+    config: s.config ?? DEFAULT_CONFIG,
     updated_at: now(),
   });
 
@@ -162,6 +164,7 @@ async function loadFromDB(): Promise<LankaState | null> {
         mission:       ws.mission       ?? defaultState.strategy.mission,
         currentFocus:  ws.current_focus ?? defaultState.strategy.currentFocus,
       },
+      config:        ws.config ? { ...DEFAULT_CONFIG, ...(ws.config as Partial<WorkspaceConfig>) } : DEFAULT_CONFIG,
       kpis:          ws.kpis ?? defaultState.kpis,
       stickers:      (stRes.data   ?? []).map(r => rowToSticker(r)),
       tasks:         (taskRes.data ?? []).map(rowToTask),
@@ -182,6 +185,7 @@ type Store = {
   state: LankaState;
   setState: React.Dispatch<React.SetStateAction<LankaState>>;
   updateStrategy: (field: keyof LankaState['strategy'], value: string) => void;
+  updateConfig: (patch: Partial<WorkspaceConfig>) => void;
   addSticker: (columnId: StickerColumnId, title: string, tag?: string) => void;
   updateSticker: (id: string, patch: Partial<LankaState['stickers'][number]>) => void;
   deleteSticker: (id: string) => void;
@@ -236,8 +240,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
     saveLocal(state);
   }, [state, loaded]);
 
-  // ── Debounced workspace sync (strategy + kpis only) ─────────────────────────
-  // Triggered by any change to strategy or kpis via setState (e.g. Dashboard KPI edits)
+  // ── Debounced workspace sync (strategy + kpis + config) ─────────────────────
   useEffect(() => {
     if (!loaded) return;
     if (wsTimer.current) clearTimeout(wsTimer.current);
@@ -248,11 +251,12 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         mission:       state.strategy.mission,
         current_focus: state.strategy.currentFocus,
         kpis:          state.kpis,
+        config:        state.config,
         updated_at:    now(),
       }).then(() => undefined);
     }, 1500);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.strategy, state.kpis, loaded]);
+  }, [state.strategy, state.kpis, state.config, loaded]);
 
   // ── Realtime: per-table subscriptions ───────────────────────────────────────
   useEffect(() => {
@@ -308,7 +312,10 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
 
     updateStrategy(field, value) {
       setState(s => ({ ...s, strategy: { ...s.strategy, [field]: value } }));
-      // workspace sync is handled by the debounced useEffect above
+    },
+
+    updateConfig(patch) {
+      setState(s => ({ ...s, config: { ...s.config, ...patch } }));
     },
 
     addSticker(columnId, title, tag = '') {
@@ -356,9 +363,9 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       if (!title.trim()) return;
       const t = {
         id: uid('task'), title: title.trim(),
-        status: opts.status ?? 'backlog' as TaskStatus,
-        owner: opts.owner ?? 'Paola' as Owner,
-        priority: opts.priority ?? 'Media' as Priority,
+        status: opts.status ?? state.config.defaultTaskStatus,
+        owner: opts.owner ?? state.config.defaultOwner,
+        priority: opts.priority ?? state.config.defaultPriority,
         dueAt: undefined, reminderAt: opts.reminderAt,
         source: opts.source, parentId: opts.parentId,
         done: false, createdAt: now(), updatedAt: now(),
