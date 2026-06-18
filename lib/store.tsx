@@ -3,7 +3,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { defaultState } from './defaultState';
 import { supabase, WORKSPACE_ID } from './supabase';
-import type { AssemblyKind, LankaState, Owner, Priority, StickerColumnId, TaskStatus } from './types';
+import type { AssemblyKind, LankaState, Owner, Priority, StickerColumnId, Task, TaskStatus, VaultItem } from './types';
+import type { GeneratedTask } from '@/app/api/generate-tasks/route';
 
 const STORAGE_KEY = 'LANKA_HQ_NEXT_V2';
 
@@ -76,7 +77,7 @@ function rowToVault(row: Row) {
   return {
     id: row.id as string,
     title: row.title as string,
-    kind: row.kind as string,
+    kind: row.kind as VaultItem['kind'],
     body: (row.body ?? '') as string,
     result: (row.result ?? '') as string,
     lesson: (row.lesson ?? '') as string,
@@ -193,6 +194,7 @@ type Store = {
   updateAssembly: (id: string, patch: Partial<LankaState['assemblies'][number]>) => void;
   assemblyToTask: (id: string) => void;
   archiveAssembly: (id: string) => void;
+  addAiTasks: (tasks: GeneratedTask[]) => void;
   exportJson: () => void;
   importJson: (file: File) => Promise<void>;
   quickAssemble: (kind: AssemblyKind) => void;
@@ -501,6 +503,48 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         }).then(() => undefined);
         return { ...s, assemblies: [a, ...s.assemblies], stickers: deselected };
       });
+    },
+
+    addAiTasks(generated: GeneratedTask[]) {
+      const newTasks: Task[] = [];
+      const dbRows: object[] = [];
+      const t = now();
+
+      generated.forEach(g => {
+        const rootId = uid('task');
+        const root: Task = {
+          id: rootId, title: g.title,
+          status: 'today', owner: g.owner, priority: g.priority,
+          dueAt: g.dueAt, source: 'IA · Stickers',
+          done: false, createdAt: t, updatedAt: t,
+        };
+        newTasks.push(root);
+        dbRows.push({
+          id: root.id, workspace_id: WORKSPACE_ID, title: root.title,
+          status: root.status, owner: root.owner, priority: root.priority,
+          due_at: root.dueAt ?? null, source: root.source, done: false,
+          created_at: t, updated_at: t,
+        });
+
+        g.subtasks.forEach(subTitle => {
+          const sub: Task = {
+            id: uid('task'), title: subTitle,
+            status: 'backlog', owner: g.owner, priority: 'Media',
+            parentId: rootId, source: 'IA · subtarea',
+            done: false, createdAt: t, updatedAt: t,
+          };
+          newTasks.push(sub);
+          dbRows.push({
+            id: sub.id, workspace_id: WORKSPACE_ID, title: sub.title,
+            status: sub.status, owner: sub.owner, priority: sub.priority,
+            parent_id: rootId, source: sub.source, done: false,
+            created_at: t, updated_at: t,
+          });
+        });
+      });
+
+      setState(s => ({ ...s, tasks: [...newTasks, ...s.tasks] }));
+      supabase.from('tasks').insert(dbRows).then(() => undefined);
     },
 
     forceSyncToCloud() {
