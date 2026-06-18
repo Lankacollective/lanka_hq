@@ -30,6 +30,7 @@ export const defaultState: LankaState = {
   ],
   assemblyQueue: [],
   assemblies: [],
+  cases: [],
   vault: [
     { id: id('vault'), title: 'Día Cero · Hipótesis inicial Lanka', kind: 'Aprendizaje', body: 'El primer territorio narrativo fuerte es: restaurantes que venden pero no saben si ganan.', result: 'Insight base creado', lesson: 'La conversación debe empezar en rentabilidad invisible, no en IA.', rating: 4, createdAt: now() },
   ],

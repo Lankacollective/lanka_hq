@@ -1,4 +1,4 @@
-export type TabId = 'hoy' | 'board' | 'sistema' | 'boveda' | 'config';
+export type TabId = 'hoy' | 'board' | 'sistema' | 'boveda' | 'casos' | 'config';
 
 export type StickerColumnId = 'sistema' | 'tareas' | 'mercado' | 'storytelling' | 'sinResponder';
 export type TaskStatus = 'backlog' | 'today' | 'doing' | 'waiting' | 'done';
@@ -120,12 +120,88 @@ export const DEFAULT_CONFIG: WorkspaceConfig = {
   aiModel: 'claude-haiku-4-5-20251001',
 };
 
+// ─── Client Cases ─────────────────────────────────────────────────────────────
+
+export type CaseStage =
+  | 'prospecto'
+  | 'diagnóstico'
+  | 'implementación'
+  | 'seguimiento'
+  | 'cerrado';
+
+export type FbSector =
+  | 'Restaurante casual'
+  | 'Fine dining'
+  | 'Bar / Cantina'
+  | 'Café / Panadería'
+  | 'Fast casual'
+  | 'Food truck'
+  | 'Dark kitchen'
+  | 'Catering'
+  | 'Hotel F&B'
+  | 'Otro';
+
+export type ClientCase = {
+  id: string;
+  /** Código anónimo visible (p.ej. "Bistró Centro", "Cliente 🦁") */
+  code: string;
+  sector: FbSector;
+  /** Número de mesas o puntos de venta */
+  size: string;
+  stage: CaseStage;
+  problemMain: string;
+  problemDetail: string;
+  /** 0-100: posición en el índice de madurez operativa */
+  maturityScore: number;
+  /** Notas sobre el diagnóstico de madurez */
+  maturityNotes: string;
+  /** KPIs del cliente (capturados manualmente por ahora) */
+  kpis: {
+    foodCostTheoretical?: number;   // % teórico según recetas
+    foodCostActual?: number;        // % real (inventario)
+    laborCost?: number;             // % nómina / ventas
+    averageTicket?: number;         // MXN
+    monthlyRevenue?: number;        // MXN
+    breakEvenMonthly?: number;      // MXN
+    wastePercent?: number;          // % merma
+    tableTurnover?: number;         // vueltas/día promedio
+  };
+  /** Qué se hizo / qué propuso Lanka */
+  solutionApplied: string;
+  /** Resultado medible obtenido */
+  result: string;
+  /** Lección aprendida para el sistema */
+  lesson: string;
+  /** Patrón repetible identificado */
+  pattern: string;
+  /** IDs de stickers relacionados a este caso */
+  stickerIds: string[];
+  /** ¿Es documentable para contenido? */
+  filmable: boolean;
+  startedAt: string;
+  closedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const MATURITY_BANDS: Array<{ min: number; max: number; label: string; desc: string; color: string }> = [
+  { min: 0,  max: 25,  label: 'Caos',    desc: 'Sin datos, decisiones intuitivas, costos desconocidos', color: '#FF1744' },
+  { min: 26, max: 50,  label: 'Datos',   desc: 'Tiene POS pero no lo analiza, food cost desconocido',   color: '#FF6D00' },
+  { min: 51, max: 75,  label: 'Sistema', desc: 'Recetas estandarizadas, KPIs semanales, inventario activo', color: '#F9A825' },
+  { min: 76, max: 100, label: 'Escala',  desc: 'Forecasting, labor scheduling, menú engineering activo', color: '#BFFF00' },
+];
+
+export function maturityBand(score: number) {
+  return MATURITY_BANDS.find(b => score >= b.min && score <= b.max) ?? MATURITY_BANDS[0];
+}
+
 export type LankaState = {
   version: 2;
   strategy: {
     hypothesis: string;
     mission: string;
     currentFocus: string;
+    [key: string]: string | boolean | undefined;
   };
   config: WorkspaceConfig;
   stickers: Sticker[];
@@ -134,6 +210,7 @@ export type LankaState = {
   assemblyQueue: string[];
   assemblies: AssemblyItem[];
   vault: VaultItem[];
+  cases: ClientCase[];
   reminders: Reminder[];
   activity: string[];
 };

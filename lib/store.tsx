@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { defaultState } from './defaultState';
 import { supabase, WORKSPACE_ID } from './supabase';
-import type { AssemblyKind, LankaState, Owner, Priority, StickerColumnId, Task, TaskStatus, VaultItem, WorkspaceConfig } from './types';
+import type { AssemblyKind, ClientCase, LankaState, Owner, Priority, StickerColumnId, Task, TaskStatus, VaultItem, WorkspaceConfig } from './types';
 import { DEFAULT_CONFIG } from './types';
 import type { GeneratedTask } from '@/app/api/generate-tasks/route';
 
@@ -87,6 +87,32 @@ function rowToVault(row: Row) {
   };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToCase(row: Record<string, any>): ClientCase {
+  return {
+    id: row.id,
+    code: row.code,
+    sector: row.sector,
+    size: row.size ?? '',
+    stage: row.stage,
+    problemMain: row.problem_main ?? '',
+    problemDetail: row.problem_detail ?? '',
+    maturityScore: row.maturity_score ?? 0,
+    maturityNotes: row.maturity_notes ?? '',
+    kpis: row.kpis ?? {},
+    solutionApplied: row.solution_applied ?? '',
+    result: row.result ?? '',
+    lesson: row.lesson ?? '',
+    pattern: row.pattern ?? '',
+    stickerIds: row.sticker_ids ?? [],
+    filmable: row.filmable ?? false,
+    startedAt: row.started_at ?? row.created_at,
+    closedAt: row.closed_at ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 // ─── Bulk seed (used on first run / import) ───────────────────────────────────
 
 async function seedDB(s: LankaState) {
@@ -138,18 +164,34 @@ async function seedDB(s: LankaState) {
       }))
     );
   }
+  if (s.cases?.length) {
+    await supabase.from('client_cases').upsert(
+      s.cases.map(c => ({
+        id: c.id, workspace_id: WORKSPACE_ID, code: c.code,
+        sector: c.sector, size: c.size, stage: c.stage,
+        problem_main: c.problemMain, problem_detail: c.problemDetail,
+        maturity_score: c.maturityScore, maturity_notes: c.maturityNotes,
+        kpis: c.kpis, solution_applied: c.solutionApplied,
+        result: c.result, lesson: c.lesson, pattern: c.pattern,
+        sticker_ids: c.stickerIds, filmable: c.filmable,
+        started_at: c.startedAt, closed_at: c.closedAt ?? null,
+        created_at: c.createdAt, updated_at: c.updatedAt,
+      }))
+    );
+  }
 }
 
 // ─── Initial DB load (parallel queries) ──────────────────────────────────────
 
 async function loadFromDB(): Promise<LankaState | null> {
   try {
-    const [wsRes, stRes, taskRes, asmRes, vaultRes] = await Promise.all([
+    const [wsRes, stRes, taskRes, asmRes, vaultRes, casesRes] = await Promise.all([
       supabase.from('workspace').select('*').eq('id', WORKSPACE_ID).single(),
       supabase.from('stickers').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
       supabase.from('tasks').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
       supabase.from('assemblies').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
       supabase.from('vault_items').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
+      supabase.from('client_cases').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
     ]);
 
     // PGRST116 = row not found: first run, not an error
@@ -170,6 +212,7 @@ async function loadFromDB(): Promise<LankaState | null> {
       tasks:         (taskRes.data ?? []).map(rowToTask),
       assemblies:    (asmRes.data  ?? []).map(rowToAssembly),
       vault:         (vaultRes.data ?? []).map(rowToVault),
+      cases:         (casesRes.data ?? []).map(rowToCase),
       assemblyQueue: [],
       reminders:     [],
       activity:      ['Cargado desde Supabase'],
@@ -199,6 +242,9 @@ type Store = {
   assemblyToTask: (id: string) => void;
   archiveAssembly: (id: string) => void;
   addAiTasks: (tasks: GeneratedTask[]) => void;
+  addCase: (patch: Partial<ClientCase>) => void;
+  updateCase: (id: string, patch: Partial<ClientCase>) => void;
+  deleteCase: (id: string) => void;
   exportJson: () => void;
   importJson: (file: File) => Promise<void>;
   quickAssemble: (kind: AssemblyKind) => void;
@@ -298,6 +344,17 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       // vault_items
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'vault_items', filter: `workspace_id=eq.${WORKSPACE_ID}` }, ({ new: row }) => {
         setState(s => ({ ...s, vault: [rowToVault(row), ...s.vault.filter(x => x.id !== row.id)] }));
+      })
+
+      // client_cases
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'client_cases', filter: `workspace_id=eq.${WORKSPACE_ID}` }, ({ new: row }) => {
+        setState(s => ({ ...s, cases: [rowToCase(row), ...s.cases.filter(x => x.id !== row.id)] }));
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'client_cases', filter: `workspace_id=eq.${WORKSPACE_ID}` }, ({ new: row }) => {
+        setState(s => ({ ...s, cases: s.cases.map(x => x.id === row.id ? rowToCase(row) : x) }));
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'client_cases' }, ({ old }) => {
+        setState(s => ({ ...s, cases: s.cases.filter(x => x.id !== (old as Row).id) }));
       })
 
       .subscribe();
@@ -510,6 +567,70 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         }).then(() => undefined);
         return { ...s, assemblies: [a, ...s.assemblies], stickers: deselected };
       });
+    },
+
+    addCase(patch) {
+      const c: ClientCase = {
+        id: uid('case'),
+        code: patch.code ?? 'Nuevo caso',
+        sector: patch.sector ?? 'Restaurante casual',
+        size: patch.size ?? '',
+        stage: patch.stage ?? 'prospecto',
+        problemMain: patch.problemMain ?? '',
+        problemDetail: patch.problemDetail ?? '',
+        maturityScore: patch.maturityScore ?? 0,
+        maturityNotes: patch.maturityNotes ?? '',
+        kpis: patch.kpis ?? {},
+        solutionApplied: patch.solutionApplied ?? '',
+        result: patch.result ?? '',
+        lesson: patch.lesson ?? '',
+        pattern: patch.pattern ?? '',
+        stickerIds: patch.stickerIds ?? [],
+        filmable: patch.filmable ?? false,
+        startedAt: patch.startedAt ?? now(),
+        closedAt: patch.closedAt,
+        createdAt: now(),
+        updatedAt: now(),
+      };
+      setState(s => ({ ...s, cases: [c, ...s.cases] }));
+      supabase.from('client_cases').insert({
+        id: c.id, workspace_id: WORKSPACE_ID, code: c.code,
+        sector: c.sector, size: c.size, stage: c.stage,
+        problem_main: c.problemMain, problem_detail: c.problemDetail,
+        maturity_score: c.maturityScore, maturity_notes: c.maturityNotes,
+        kpis: c.kpis, solution_applied: c.solutionApplied,
+        result: c.result, lesson: c.lesson, pattern: c.pattern,
+        sticker_ids: c.stickerIds, filmable: c.filmable,
+        started_at: c.startedAt, closed_at: c.closedAt ?? null,
+        created_at: c.createdAt, updated_at: c.updatedAt,
+      }).then(() => undefined);
+    },
+
+    updateCase(id, patch) {
+      setState(s => ({ ...s, cases: s.cases.map(c => c.id === id ? { ...c, ...patch, updatedAt: now() } : c) }));
+      const db: Row = { updated_at: now() };
+      if (patch.code            !== undefined) db.code             = patch.code;
+      if (patch.sector          !== undefined) db.sector           = patch.sector;
+      if (patch.size            !== undefined) db.size             = patch.size;
+      if (patch.stage           !== undefined) db.stage            = patch.stage;
+      if (patch.problemMain     !== undefined) db.problem_main     = patch.problemMain;
+      if (patch.problemDetail   !== undefined) db.problem_detail   = patch.problemDetail;
+      if (patch.maturityScore   !== undefined) db.maturity_score   = patch.maturityScore;
+      if (patch.maturityNotes   !== undefined) db.maturity_notes   = patch.maturityNotes;
+      if (patch.kpis            !== undefined) db.kpis             = patch.kpis;
+      if (patch.solutionApplied !== undefined) db.solution_applied = patch.solutionApplied;
+      if (patch.result          !== undefined) db.result           = patch.result;
+      if (patch.lesson          !== undefined) db.lesson           = patch.lesson;
+      if (patch.pattern         !== undefined) db.pattern          = patch.pattern;
+      if (patch.stickerIds      !== undefined) db.sticker_ids      = patch.stickerIds;
+      if (patch.filmable        !== undefined) db.filmable         = patch.filmable;
+      if (patch.closedAt        !== undefined) db.closed_at        = patch.closedAt ?? null;
+      supabase.from('client_cases').update(db).eq('id', id).then(() => undefined);
+    },
+
+    deleteCase(id) {
+      setState(s => ({ ...s, cases: s.cases.filter(c => c.id !== id) }));
+      supabase.from('client_cases').delete().eq('id', id).then(() => undefined);
     },
 
     addAiTasks(generated: GeneratedTask[]) {
