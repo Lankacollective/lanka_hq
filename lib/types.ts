@@ -53,6 +53,7 @@ export type Task = {
   dueAt?: string;
   reminderAt?: string;
   source?: string;
+  parentId?: string;   // undefined = tarea raíz; set = subtarea
   done: boolean;
   createdAt: string;
   updatedAt: string;

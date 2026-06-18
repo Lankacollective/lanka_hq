@@ -52,6 +52,7 @@ function rowToTask(row: Row) {
     dueAt: (row.due_at ?? undefined) as string | undefined,
     reminderAt: (row.reminder_at ?? undefined) as string | undefined,
     source: (row.source ?? undefined) as string | undefined,
+    parentId: (row.parent_id ?? undefined) as string | undefined,
     done: row.done as boolean,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -111,8 +112,8 @@ async function seedDB(s: LankaState) {
         id: t.id, workspace_id: WORKSPACE_ID, title: t.title,
         status: t.status, owner: t.owner, priority: t.priority,
         due_at: t.dueAt ?? null, reminder_at: t.reminderAt ?? null,
-        source: t.source ?? null, done: t.done,
-        created_at: t.createdAt, updated_at: t.updatedAt,
+        source: t.source ?? null, parent_id: t.parentId ?? null,
+        done: t.done, created_at: t.createdAt, updated_at: t.updatedAt,
       }))
     );
   }
@@ -185,8 +186,9 @@ type Store = {
   deleteSticker: (id: string) => void;
   toggleSticker: (id: string) => void;
   sendSelectedToAssembly: () => void;
-  addTask: (title: string, opts?: Partial<{ status: TaskStatus; owner: Owner; priority: Priority; reminderAt: string; source: string }>) => void;
+  addTask: (title: string, opts?: Partial<{ status: TaskStatus; owner: Owner; priority: Priority; reminderAt: string; source: string; parentId: string }>) => void;
   updateTask: (id: string, patch: Partial<LankaState['tasks'][number]>) => void;
+  deleteTask: (id: string) => void;
   createAssemblyFromQueue: (kind: AssemblyKind) => void;
   updateAssembly: (id: string, patch: Partial<LankaState['assemblies'][number]>) => void;
   assemblyToTask: (id: string) => void;
@@ -356,14 +358,19 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         owner: opts.owner ?? 'Paola' as Owner,
         priority: opts.priority ?? 'Media' as Priority,
         dueAt: undefined, reminderAt: opts.reminderAt,
-        source: opts.source, done: false,
-        createdAt: now(), updatedAt: now(),
+        source: opts.source, parentId: opts.parentId,
+        done: false, createdAt: now(), updatedAt: now(),
       };
-      setState(s => ({ ...s, tasks: [t, ...s.tasks] }));
+      // subtareas se insertan al final; tareas raíz al principio
+      setState(s => ({
+        ...s,
+        tasks: opts.parentId ? [...s.tasks, t] : [t, ...s.tasks],
+      }));
       supabase.from('tasks').insert({
         id: t.id, workspace_id: WORKSPACE_ID, title: t.title,
         status: t.status, owner: t.owner, priority: t.priority,
         reminder_at: t.reminderAt ?? null, source: t.source ?? null,
+        parent_id: t.parentId ?? null,
         done: false, created_at: t.createdAt, updated_at: t.updatedAt,
       }).then(() => undefined);
     },
@@ -376,9 +383,15 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       if (patch.owner       !== undefined) db.owner       = patch.owner;
       if (patch.priority    !== undefined) db.priority    = patch.priority;
       if (patch.done        !== undefined) db.done        = patch.done;
-      if (patch.dueAt       !== undefined) db.due_at      = patch.dueAt;
+      if (patch.dueAt       !== undefined) db.due_at      = patch.dueAt || null;
       if (patch.reminderAt  !== undefined) db.reminder_at = patch.reminderAt;
       supabase.from('tasks').update(db).eq('id', id).then(() => undefined);
+    },
+
+    deleteTask(id) {
+      // CASCADE en DB elimina subtareas automáticamente
+      setState(s => ({ ...s, tasks: s.tasks.filter(t => t.id !== id && t.parentId !== id) }));
+      supabase.from('tasks').delete().eq('id', id).then(() => undefined);
     },
 
     createAssemblyFromQueue(kind) {

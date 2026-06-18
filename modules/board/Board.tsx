@@ -1,10 +1,14 @@
 'use client';
 
+'use client';
+
 import { useState } from 'react';
 import { Card, SectionTitle } from '@/components/Primitives';
 import { useLanka } from '@/lib/store';
 import { COLUMN_TAGS } from '@/lib/types';
-import type { StickerColumnId, TaskStatus } from '@/lib/types';
+import type { Owner, StickerColumnId, TaskStatus } from '@/lib/types';
+
+const OWNERS: Owner[] = ['Paola', 'Mathias', 'Ambos', 'IA'];
 
 const cols: Array<{
   id: StickerColumnId;
@@ -52,7 +56,8 @@ function AddSticker({ columnId }: { columnId: StickerColumnId }) {
 }
 
 export function Board() {
-  const { state, updateSticker, deleteSticker, toggleSticker, addTask, updateTask } = useLanka();
+  const { state, updateSticker, deleteSticker, toggleSticker, addTask, updateTask, deleteTask } = useLanka();
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
 
   return (
     <div>
@@ -189,26 +194,44 @@ export function Board() {
           <Card key={col.id}>
             <h4 className="mb-3 font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">{col.title}</h4>
             <div className="space-y-2">
-              {state.tasks.filter(t => t.status === col.id).map(t => (
-                <div key={t.id} className="border border-[var(--line)] bg-[var(--surface2)] p-3">
-                  <input
-                    value={t.title}
-                    onChange={e => updateTask(t.id, { title: e.target.value })}
-                    className="w-full bg-transparent text-sm font-bold text-[var(--ink)] outline-none"
-                  />
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {taskCols.map(dest => (
-                      <button
-                        key={dest.id}
-                        onClick={() => updateTask(t.id, { status: dest.id, done: dest.id === 'done' })}
-                        className="border border-[var(--line)] px-2 py-1 font-mono text-[9px] uppercase text-[var(--muted)] hover:border-[var(--ink2)] hover:text-[var(--ink)]"
-                      >
-                        {dest.title}
-                      </button>
-                    ))}
+              {state.tasks.filter(t => t.status === col.id && !t.parentId).map(t => {
+                const isOpen = expandedTask === t.id;
+                return (
+                  <div key={t.id} className={`border bg-[var(--surface2)] p-3 ${t.done ? 'opacity-50' : 'border-[var(--line)]'}`}>
+                    <div className="flex items-start gap-1">
+                      <input
+                        value={t.title}
+                        onChange={e => updateTask(t.id, { title: e.target.value })}
+                        className="min-w-0 flex-1 bg-transparent text-sm font-bold text-[var(--ink)] outline-none"
+                      />
+                      <button onClick={() => setExpandedTask(isOpen ? null : t.id)} className="text-[var(--muted)] hover:text-[var(--ink)]" style={{ fontSize: 11 }}>✎</button>
+                      <button onClick={() => deleteTask(t.id)} className="text-[var(--muted)] hover:text-[var(--signal)]" style={{ fontSize: 13 }}>×</button>
+                    </div>
+                    {isOpen && (
+                      <div className="mt-2 grid grid-cols-2 gap-1 border-t border-[var(--line)] pt-2">
+                        <select value={t.owner} onChange={e => updateTask(t.id, { owner: e.target.value as Owner })} className="border border-[var(--line)] bg-[var(--surface)] px-1 py-1 font-mono text-[10px] text-[var(--ink)] outline-none">
+                          {OWNERS.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                        <input type="date" value={t.dueAt ?? ''} onChange={e => updateTask(t.id, { dueAt: e.target.value || undefined })} className="border border-[var(--line)] bg-[var(--surface)] px-1 py-1 font-mono text-[10px] text-[var(--ink)] outline-none" />
+                      </div>
+                    )}
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {taskCols.map(dest => (
+                        <button
+                          key={dest.id}
+                          onClick={() => updateTask(t.id, { status: dest.id, done: dest.id === 'done' })}
+                          className={`border px-2 py-1 font-mono text-[9px] uppercase transition ${t.status === dest.id ? 'border-[var(--acid)] text-[var(--acid)]' : 'border-[var(--line)] text-[var(--muted)] hover:border-[var(--acid)] hover:text-[var(--ink)]'}`}
+                        >
+                          {dest.title}
+                        </button>
+                      ))}
+                    </div>
+                    {t.dueAt && (
+                      <p className="mt-1 font-mono text-[9px] text-[var(--muted)]">{t.owner} · {new Date(t.dueAt + 'T12:00:00').toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })}</p>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </Card>
         ))}
