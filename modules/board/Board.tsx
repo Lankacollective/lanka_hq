@@ -142,6 +142,15 @@ export function Board() {
                       style={{ fontSize: 11, background: 'rgba(0,0,0,.08)', border: '1px solid rgba(0,0,0,.15)', borderRadius: 5, padding: '4px 7px', minHeight: 0, color: '#111' }}
                     />
 
+                    {/* Acquisition angle — optional sales tactic */}
+                    <input
+                      value={st.acquisitionAngle ?? ''}
+                      onChange={e => updateSticker(st.id, { acquisitionAngle: e.target.value || undefined })}
+                      placeholder="Táctica de venta (opcional)..."
+                      className="mt-1 w-full outline-none"
+                      style={{ fontSize: 10, fontFamily: 'var(--font-mono-custom)', background: 'rgba(0,0,0,.06)', border: '1px dashed rgba(0,0,0,.2)', borderRadius: 4, padding: '3px 7px', color: '#333' }}
+                    />
+
                     {/* Actions */}
                     <div className="mt-2 flex items-center gap-1">
                       <button

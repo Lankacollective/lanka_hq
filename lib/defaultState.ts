@@ -11,11 +11,11 @@ export const defaultState: LankaState = {
     currentFocus: 'Día Cero: capturar caos, seleccionar patrones, ensamblar primera pieza y crear acciones reales.',
   },
   stickers: [
-    { id: id('st'), columnId: 'sistema',      tag: 'Producto',              title: 'Definir primer producto Lanka: diagnóstico, auditoría o sistema mensual', note: '', selected: false, createdAt: now(), updatedAt: now() },
-    { id: id('st'), columnId: 'tareas',       tag: 'Tareas ejecutables',    title: 'Pedir a Mathias los 5 KPIs que revisa primero en una auditoría',          note: '', selected: false, createdAt: now(), updatedAt: now() },
-    { id: id('st'), columnId: 'mercado',      tag: 'Público Objetivo',      title: 'Restaurantes llenos pueden perder dinero',                                  note: '', selected: false, createdAt: now(), updatedAt: now() },
-    { id: id('st'), columnId: 'storytelling', tag: 'Pilar',                 title: 'Tu restaurante puede estar lleno y aun así perder dinero',                  note: '', selected: false, createdAt: now(), updatedAt: now() },
-    { id: id('st'), columnId: 'sinResponder', tag: 'Preguntas sin resolver', title: '¿Lanka debe mostrarse como consultoría, laboratorio o software?',           note: '', selected: false, createdAt: now(), updatedAt: now() },
+    { id: id('st'), columnId: 'sistema',      tag: 'Producto',               title: 'Definir primer producto Lanka: diagnóstico, auditoría o sistema mensual', note: '', acquisitionAngle: undefined, selected: false, createdAt: now(), updatedAt: now() },
+    { id: id('st'), columnId: 'tareas',       tag: 'Tareas ejecutables',    title: 'Pedir a Mathias los 5 KPIs que revisa primero en una auditoría',           note: '', acquisitionAngle: undefined, selected: false, createdAt: now(), updatedAt: now() },
+    { id: id('st'), columnId: 'mercado',      tag: 'Público Objetivo',      title: 'Restaurantes llenos pueden perder dinero',                                   note: '', acquisitionAngle: undefined, selected: false, createdAt: now(), updatedAt: now() },
+    { id: id('st'), columnId: 'storytelling', tag: 'Pilar',                 title: 'Tu restaurante puede estar lleno y aun así perder dinero',                   note: '', acquisitionAngle: undefined, selected: false, createdAt: now(), updatedAt: now() },
+    { id: id('st'), columnId: 'sinResponder', tag: 'Preguntas sin resolver', title: '¿Lanka debe mostrarse como consultoría, laboratorio o software?',            note: '', acquisitionAngle: undefined, selected: false, createdAt: now(), updatedAt: now() },
   ],
   tasks: [
     { id: id('task'), title: 'Cerrar Día Cero: revisar stickers, tareas y primer ensamblaje', status: 'today', owner: 'Paola', priority: 'Alta', done: false, createdAt: now(), updatedAt: now() },

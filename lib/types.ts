@@ -6,7 +6,21 @@ export type Owner = 'Paola' | 'Mathias' | 'Ambos' | 'IA';
 export type Priority = 'Alta' | 'Media' | 'Baja';
 export type AssemblyKind = 'Contenido' | 'Tarea' | 'Decisión' | 'Sistema' | 'Brief IA';
 
-export const COLUMN_TAGS: Record<StickerColumnId, readonly string[]> = {
+// ─── Sticker taxonomy ─────────────────────────────────────────────────────────
+
+export type StickerSubcategory = {
+  sistema:      'Producto' | 'Puntos de dolor' | 'Resuelve' | 'Herramientas' | 'Financiero' | 'Expansión' | 'Entregables' | 'Protocolos';
+  mercado:      'Público Objetivo' | 'Competencia' | 'Diferenciador' | 'Inspo' | 'Objeciones';
+  storytelling: 'Framework' | 'Pilar' | 'Building in Public' | 'Tono / Voz';
+  tareas:       'Tareas ejecutables' | 'Ideas' | 'Caballo de Troya' | 'Ganchos';
+  sinResponder: 'Preguntas sin resolver' | 'Barreras' | 'Riesgos Internos';
+};
+
+// Tag for a given column is the union of that column's subcategory literals
+export type StickerTag<C extends StickerColumnId = StickerColumnId> = StickerSubcategory[C];
+
+// Runtime lookup: column → allowed tag values
+export const COLUMN_TAGS: { [C in StickerColumnId]: ReadonlyArray<StickerSubcategory[C]> } = {
   sistema:      ['Producto', 'Puntos de dolor', 'Resuelve', 'Herramientas', 'Financiero', 'Expansión', 'Entregables', 'Protocolos'],
   mercado:      ['Público Objetivo', 'Competencia', 'Diferenciador', 'Inspo', 'Objeciones'],
   storytelling: ['Framework', 'Pilar', 'Building in Public', 'Tono / Voz'],
@@ -14,12 +28,17 @@ export const COLUMN_TAGS: Record<StickerColumnId, readonly string[]> = {
   sinResponder: ['Preguntas sin resolver', 'Barreras', 'Riesgos Internos'],
 } as const;
 
+// ─── Core entities ────────────────────────────────────────────────────────────
+
 export type Sticker = {
   id: string;
   columnId: StickerColumnId;
   title: string;
   note: string;
+  /** Subcategory tag — constrained to the column's valid values at runtime */
   tag: string;
+  /** Free-form sales/acquisition angle. Optional, never required to save. */
+  acquisitionAngle?: string;
   selected: boolean;
   createdAt: string;
   updatedAt: string;
