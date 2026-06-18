@@ -7,6 +7,7 @@ import { MATURITY_BANDS, maturityBand } from '@/lib/types';
 import type { CaseStage } from '@/lib/types';
 import { CaseCard } from './CaseCard';
 import { CaseForm } from './CaseForm';
+import { DiagnosticoRapido } from './DiagnosticoRapido';
 
 const STAGE_TABS: Array<{ id: CaseStage | 'todos'; label: string }> = [
   { id: 'todos',          label: 'Todos' },
@@ -21,6 +22,7 @@ export function Casos() {
   const { state, addCase } = useLanka();
   const [stageFilter, setStageFilter] = useState<CaseStage | 'todos'>('todos');
   const [adding, setAdding] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
   const cases = state.cases ?? [];
 
   const filtered = useMemo(() =>
@@ -40,6 +42,10 @@ export function Casos() {
   const patternMap: Record<string, number> = {};
   cases.forEach(c => { if (c.pattern) patternMap[c.pattern] = (patternMap[c.pattern] ?? 0) + 1; });
   const topPatterns = Object.entries(patternMap).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+  if (diagnosing) {
+    return <DiagnosticoRapido onBack={() => setDiagnosing(false)} />;
+  }
 
   if (adding) {
     return (
@@ -61,12 +67,20 @@ export function Casos() {
           title="Clientes & Patrones"
           subtitle="Cada caso documentado es validación de mercado y entrenamiento del sistema"
         />
-        <button
-          onClick={() => setAdding(true)}
-          className="mt-1 flex-shrink-0 border border-[var(--acid)] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--acid)] hover:bg-[var(--acid)] hover:text-black transition"
-        >
-          + Nuevo caso
-        </button>
+        <div className="mt-1 flex flex-shrink-0 gap-2">
+          <button
+            onClick={() => setDiagnosing(true)}
+            className="border border-[var(--primary)] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition"
+          >
+            ⬡ Diagnóstico
+          </button>
+          <button
+            onClick={() => setAdding(true)}
+            className="border border-[var(--acid)] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--acid)] hover:bg-[var(--acid)] hover:text-black transition"
+          >
+            + Nuevo caso
+          </button>
+        </div>
       </div>
 
       {/* ── Stats ── */}
