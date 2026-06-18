@@ -6,21 +6,28 @@
 }
 
 :root {
-  --bone: #EBE9E4;
-  --ink: #1A1A1A;
-  --ink2: #303030;
-  --muted: #77716A;
-  --terra: #B5522A;
-  --acid: #C8D84B;
-  --amber: #D4882A;
-  --green: #4A7C59;
-  --display: Impact, "Arial Black", system-ui, sans-serif;
-  --line: rgba(23,23,23,.16);
+  /* ── Warm Brutalism Dark ── */
+  --bone:    #0C0C0C;
+  --surface: #161616;
+  --surface2: #1F1F1F;
+  --ink:     #F4F4EE;
+  --ink2:    #BFFF00;
+  --muted:   #666666;
+  --terra:   #B5522A;
+  --acid:    #BFFF00;
+  --amber:   #D4882A;
+  --green:   #4A7C59;
+  --line:    rgba(244,244,238,.10);
+  --display: var(--font-display), 'Barlow Condensed', Impact, 'Arial Black', system-ui, sans-serif;
 }
 
 html, body { min-height: 100%; background: var(--bone); color: var(--ink); }
 body { font-family: var(--font-grotesk), ui-sans-serif, system-ui, sans-serif; }
 textarea, input, button { font: inherit; }
+
+/* Inputs & textareas inherit dark theme */
+input::placeholder,
+textarea::placeholder { color: var(--muted); }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

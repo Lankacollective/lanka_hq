@@ -6,11 +6,20 @@ export type Owner = 'Paola' | 'Mathias' | 'Ambos' | 'IA';
 export type Priority = 'Alta' | 'Media' | 'Baja';
 export type AssemblyKind = 'Contenido' | 'Tarea' | 'Decisión' | 'Sistema' | 'Brief IA';
 
+export const COLUMN_TAGS: Record<StickerColumnId, readonly string[]> = {
+  sistema:      ['Producto', 'Puntos de dolor', 'Resuelve', 'Herramientas', 'Financiero', 'Expansión', 'Entregables', 'Protocolos'],
+  mercado:      ['Público Objetivo', 'Competencia', 'Diferenciador', 'Inspo', 'Objeciones'],
+  storytelling: ['Framework', 'Pilar', 'Building in Public', 'Tono / Voz'],
+  tareas:       ['Tareas ejecutables', 'Ideas', 'Caballo de Troya', 'Ganchos'],
+  sinResponder: ['Preguntas sin resolver', 'Barreras', 'Riesgos Internos'],
+} as const;
+
 export type Sticker = {
   id: string;
   columnId: StickerColumnId;
   title: string;
   note: string;
+  tag: string;
   selected: boolean;
   createdAt: string;
   updatedAt: string;

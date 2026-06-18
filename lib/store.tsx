@@ -35,6 +35,7 @@ function rowToSticker(row: Row, selected = false) {
     columnId: row.column_id as StickerColumnId,
     title: row.title as string,
     note: (row.note ?? '') as string,
+    tag: (row.tag ?? '') as string,
     selected,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -99,7 +100,7 @@ async function seedDB(s: LankaState) {
     await supabase.from('stickers').upsert(
       s.stickers.map(st => ({
         id: st.id, workspace_id: WORKSPACE_ID, column_id: st.columnId,
-        title: st.title, note: st.note,
+        title: st.title, note: st.note, tag: st.tag ?? '',
         created_at: st.createdAt, updated_at: st.updatedAt,
       }))
     );
@@ -179,7 +180,7 @@ type Store = {
   state: LankaState;
   setState: React.Dispatch<React.SetStateAction<LankaState>>;
   updateStrategy: (field: keyof LankaState['strategy'], value: string) => void;
-  addSticker: (columnId: StickerColumnId, title: string) => void;
+  addSticker: (columnId: StickerColumnId, title: string, tag?: string) => void;
   updateSticker: (id: string, patch: Partial<LankaState['stickers'][number]>) => void;
   deleteSticker: (id: string) => void;
   toggleSticker: (id: string) => void;
@@ -306,13 +307,13 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       // workspace sync is handled by the debounced useEffect above
     },
 
-    addSticker(columnId, title) {
+    addSticker(columnId, title, tag = '') {
       if (!title.trim()) return;
-      const st = { id: uid('st'), columnId, title: title.trim(), note: '', selected: false, createdAt: now(), updatedAt: now() };
+      const st = { id: uid('st'), columnId, title: title.trim(), note: '', tag, selected: false, createdAt: now(), updatedAt: now() };
       setState(s => ({ ...s, stickers: [st, ...s.stickers] }));
       supabase.from('stickers').insert({
         id: st.id, workspace_id: WORKSPACE_ID, column_id: columnId,
-        title: st.title, note: '', created_at: st.createdAt, updated_at: st.updatedAt,
+        title: st.title, note: '', tag, created_at: st.createdAt, updated_at: st.updatedAt,
       }).then(() => undefined);
     },
 
@@ -321,6 +322,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       const db: Row = { updated_at: now() };
       if (patch.title    !== undefined) db.title     = patch.title;
       if (patch.note     !== undefined) db.note      = patch.note;
+      if (patch.tag      !== undefined) db.tag       = patch.tag;
       if (patch.columnId !== undefined) db.column_id = patch.columnId;
       supabase.from('stickers').update(db).eq('id', id).then(() => undefined);
     },
