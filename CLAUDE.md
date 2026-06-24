@@ -57,6 +57,18 @@ curl -s -X PATCH "https://tmypjnoapglzdidrurqq.supabase.co/functions/v1/update-t
 ```
 Puedes buscar por id exacto O por título parcial: `{"title":"nombre parcial", "status":"done"}`. Campos actualizables: `title`, `status`, `priority`, `assignee`, `date`, `time`, `description`, `notes`.
 
+### GitHub MCP
+Usa las herramientas `mcp__github__*` para leer y escribir en repos de lankacollective.
+- Leer archivo: `mcp__github__get_file_contents`
+- Crear/actualizar archivo: `mcp__github__create_or_update_file`
+- Crear rama: `mcp__github__create_branch`
+
+**Contexto de sesión persistente (leer al inicio de cada sesión de mkt.lanka):**
+```
+mcp__github__get_file_contents
+owner: lankacollective | repo: mkt.lanka | ref: docs/contexto-sesion | path: CONTEXTO_SESION.md
+```
+
 ### Google Calendar
 Usa las herramientas `mcp__Google_Calendar__*`. Timezone siempre: `America/Mexico_City`.
 
@@ -127,6 +139,60 @@ Cuando Paola pida bloquear tiempo para una tarea:
 1. Revisa el calendario del día para encontrar huecos libres
 2. Propón un bloque específico (ej. "10:00–11:30")
 3. Si confirma, crea el evento en Google Calendar con `create_event`
+
+### SESIÓN FINALIZADA
+Cuando Paola diga **"SESIÓN FINALIZADA"** (en cualquier sesión de trabajo, no solo mkt.lanka), ejecuta todo lo siguiente **sin pedir confirmación**, en este orden:
+
+**PASO 1 — Compilar lista de lo hecho**
+Reconstruye desde la conversación de esta sesión todo lo que se trabajó. Organiza por proyecto cliente:
+- Aitama / Mammut / Pololo / Lanka Manager / MKT Lanka / Marketing Personal / u otros que aparezcan
+- Para cada proyecto: lista de tareas concretas realizadas (no genéricas)
+- Indica claramente si un proyecto no tuvo tareas hoy
+
+**PASO 2 — Sincronizar con CAOS**
+a. Llama `get-tasks?date=today` para ver qué hay registrado hoy
+b. Marca como `status:"listo"` todas las tareas de hoy que ya se completaron (via `update-task`)
+c. Para cada tarea realizada en sesión que NO esté en CAOS, agrégala con `add-task`:
+   - `status: "listo"`, `date: hoy`, `assignee: "Paola Sagrero"`
+   - `project`: el proyecto cliente correspondiente (POLOLO, MAMMUT, AITAMA, LANKA MANAGER, MKT LANKA, etc.)
+   - `source: "sesión <fecha>"`
+   - `description`: descripción técnica breve de lo que se hizo
+d. Si hubieron tareas de otros miembros del equipo (Mathias, etc.), agrégalas con el assignee correcto
+
+**PASO 3 — Actualizar CONTEXTO_SESION.md en GitHub**
+a. Lee el archivo actual:
+   ```
+   mcp__github__get_file_contents
+   owner: lankacollective | repo: mkt.lanka | ref: docs/contexto-sesion | path: CONTEXTO_SESION.md
+   ```
+b. Actualiza el archivo con:
+   - Fecha de esta sesión
+   - PRs o cambios técnicos realizados (si aplica)
+   - Pendientes actualizados
+   - Cualquier credencial nueva o cambio en infraestructura
+c. Sube con `mcp__github__create_or_update_file`:
+   - `owner: lankacollective`, `repo: mkt.lanka`, `branch: docs/contexto-sesion`
+   - `path: CONTEXTO_SESION.md`
+   - Incluye el SHA del archivo actual para el update
+   - `message: "docs: actualizar contexto sesión <fecha>"`
+
+**PASO 4 — Presentar resumen**
+Muestra a Paola:
+```
+SESIÓN CERRADA ✓ — <fecha>
+
+AITAMA: <n tareas> | MAMMUT: <n> | POLOLO: <n> | LANKA MANAGER: <n> | ...
+→ <lista de tareas por proyecto>
+
+CAOS actualizado ✓
+CONTEXTO_SESION.md actualizado ✓ (rama docs/contexto-sesion)
+```
+
+**Notas importantes para este comportamiento:**
+- Ejecuta los 4 pasos completos sin esperar aprobación intermedia
+- Si CAOS falla en alguna tarea, continúa con las demás y reporta el error al final
+- Si el archivo CONTEXTO_SESION.md no existe en la rama, créalo desde cero con `mcp__github__create_branch` primero si la rama tampoco existe
+- La rama `docs/contexto-sesion` en `lankacollective/mkt.lanka` es permanente y nunca se mergea a main
 
 ---
 
