@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Barlow_Condensed, Space_Grotesk, Space_Mono } from 'next/font/google';
 import './globals.css';
+import { AuthGate } from '@/components/AuthGate';
 
 const barlow = Barlow_Condensed({
   subsets: ['latin'],
@@ -28,7 +29,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es" className={`${barlow.variable} ${grotesk.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <AuthGate>{children}</AuthGate>
+      </body>
     </html>
   );
 }
