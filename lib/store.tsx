@@ -3,9 +3,12 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { defaultState } from './defaultState';
 import { supabase, WORKSPACE_ID } from './supabase';
+import { caosAddTask, caosGetTasks, caosUpdateTask } from './caos';
 import type { AssemblyKind, ClientCase, LankaState, ModeloSection, Owner, Priority, RoadmapItem, StickerColumnId, Task, TaskStatus, VaultItem, WorkspaceConfig } from './types';
 import { DEFAULT_CONFIG, MODELO_INDEX } from './types';
 import type { GeneratedTask } from '@/app/api/generate-tasks/route';
+
+const TASKS_POLL_MS = 20000;
 
 const STORAGE_KEY = 'LANKA_HQ_NEXT_V2';
 
@@ -46,23 +49,6 @@ function rowToSticker(row: Row, selected = false) {
     note: (row.note ?? '') as string,
     tag: (row.tag ?? '') as string,
     selected,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
-  };
-}
-
-function rowToTask(row: Row) {
-  return {
-    id: row.id as string,
-    title: row.title as string,
-    status: row.status as TaskStatus,
-    owner: row.owner as Owner,
-    priority: row.priority as Priority,
-    dueAt: (row.due_at ?? undefined) as string | undefined,
-    reminderAt: (row.reminder_at ?? undefined) as string | undefined,
-    source: (row.source ?? undefined) as string | undefined,
-    parentId: (row.parent_id ?? undefined) as string | undefined,
-    done: row.done as boolean,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -157,18 +143,7 @@ async function seedDB(s: LankaState) {
     );
     logDbError('seed stickers', error);
   }
-  if (s.tasks.length) {
-    const { error } = await supabase.from('tasks').upsert(
-      s.tasks.map(t => ({
-        id: t.id, workspace_id: WORKSPACE_ID, title: t.title,
-        status: t.status, owner: t.owner, priority: t.priority,
-        due_at: t.dueAt ?? null, reminder_at: t.reminderAt ?? null,
-        source: t.source ?? null, parent_id: t.parentId ?? null,
-        done: t.done, created_at: t.createdAt, updated_at: t.updatedAt,
-      }))
-    );
-    logDbError('seed tasks', error);
-  }
+  // tasks ya no se siembran aquí — CAOS es la fuente única (ver lib/caos.ts)
   if (s.assemblies.length) {
     const { error } = await supabase.from('assemblies').upsert(
       s.assemblies.map(a => ({
@@ -211,10 +186,10 @@ async function seedDB(s: LankaState) {
 
 async function loadFromDB(): Promise<LankaState | null> {
   try {
-    const [wsRes, stRes, taskRes, asmRes, vaultRes, casesRes] = await Promise.all([
+    const [wsRes, stRes, tasks, asmRes, vaultRes, casesRes] = await Promise.all([
       supabase.from('workspace').select('*').eq('id', WORKSPACE_ID).single(),
       supabase.from('stickers').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
-      supabase.from('tasks').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
+      caosGetTasks().catch(() => [] as Task[]),
       supabase.from('assemblies').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
       supabase.from('vault_items').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
       supabase.from('client_cases').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
@@ -252,7 +227,7 @@ async function loadFromDB(): Promise<LankaState | null> {
       modelo:        mergeModelo(modeloRaw),
       roadmap,
       stickers:      (stRes.data   ?? []).map(r => rowToSticker(r)),
-      tasks:         (taskRes.data ?? []).map(rowToTask),
+      tasks,
       assemblies:    (asmRes.data  ?? []).map(rowToAssembly),
       vault:         (vaultRes.data ?? []).map(rowToVault),
       cases:         (casesRes.data ?? []).map(rowToCase),
@@ -367,16 +342,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         setState(s => ({ ...s, stickers: s.stickers.filter(x => x.id !== (old as Row).id) }));
       })
 
-      // tasks
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks', filter: `workspace_id=eq.${WORKSPACE_ID}` }, ({ new: row }) => {
-        setState(s => ({ ...s, tasks: [rowToTask(row), ...s.tasks.filter(x => x.id !== row.id)] }));
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks', filter: `workspace_id=eq.${WORKSPACE_ID}` }, ({ new: row }) => {
-        setState(s => ({ ...s, tasks: s.tasks.map(x => x.id === row.id ? rowToTask(row) : x) }));
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'tasks' }, ({ old }) => {
-        setState(s => ({ ...s, tasks: s.tasks.filter(x => x.id !== (old as Row).id) }));
-      })
+      // tasks: ya no vive en Supabase — ver polling a CAOS más abajo
 
       // assemblies
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'assemblies', filter: `workspace_id=eq.${WORKSPACE_ID}` }, ({ new: row }) => {
@@ -409,6 +375,16 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
 
     return () => { supabase.removeChannel(ch); };
   }, []);
+
+  // ── Tasks: CAOS no tiene realtime — se sincroniza por polling ───────────────
+  useEffect(() => {
+    if (!loaded) return;
+    const poll = () => {
+      caosGetTasks().then(tasks => setState(s => ({ ...s, tasks }))).catch(() => undefined);
+    };
+    const id = setInterval(poll, TASKS_POLL_MS);
+    return () => clearInterval(id);
+  }, [loaded]);
 
   // ─── Actions ────────────────────────────────────────────────────────────────
   const store = useMemo<Store>(() => ({
@@ -476,36 +452,36 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         done: false, createdAt: now(), updatedAt: now(),
       };
       // subtareas se insertan al final; tareas raíz al principio
+      // Nota: CAOS no soporta parent_id — las subtareas se ven anidadas en HQ
+      // durante la sesión, pero se sincronizan a CAOS como tareas planas.
       setState(s => ({
         ...s,
         tasks: opts.parentId ? [...s.tasks, t] : [t, ...s.tasks],
       }));
-      supabase.from('tasks').insert({
-        id: t.id, workspace_id: WORKSPACE_ID, title: t.title,
-        status: t.status, owner: t.owner, priority: t.priority,
-        reminder_at: t.reminderAt ?? null, source: t.source ?? null,
-        parent_id: t.parentId ?? null,
-        done: false, created_at: t.createdAt, updated_at: t.updatedAt,
-      }).then(({ error }) => logDbError('crear tarea', error));
+      caosAddTask({ title: t.title, status: t.status, owner: t.owner, priority: t.priority, dueAt: t.dueAt, source: t.source })
+        .then(realId => {
+          if (realId && realId !== t.id) {
+            setState(s => ({ ...s, tasks: s.tasks.map(x => x.id === t.id ? { ...x, id: realId } : x) }));
+          }
+        })
+        .catch(err => logDbError('crear tarea (CAOS)', { message: String(err) }));
     },
 
     updateTask(id, patch) {
       setState(s => ({ ...s, tasks: s.tasks.map(t => t.id === id ? { ...t, ...patch, updatedAt: now() } : t) }));
-      const db: Row = { updated_at: now() };
-      if (patch.title       !== undefined) db.title       = patch.title;
-      if (patch.status      !== undefined) db.status      = patch.status;
-      if (patch.owner       !== undefined) db.owner       = patch.owner;
-      if (patch.priority    !== undefined) db.priority    = patch.priority;
-      if (patch.done        !== undefined) db.done        = patch.done;
-      if (patch.dueAt       !== undefined) db.due_at      = patch.dueAt || null;
-      if (patch.reminderAt  !== undefined) db.reminder_at = patch.reminderAt;
-      supabase.from('tasks').update(db).eq('id', id).then(({ error }) => logDbError('actualizar tarea', error));
+      caosUpdateTask(id, {
+        title: patch.title,
+        status: patch.status,
+        owner: patch.owner,
+        priority: patch.priority,
+        dueAt: patch.dueAt,
+      }).catch(err => logDbError('actualizar tarea (CAOS)', { message: String(err) }));
     },
 
     deleteTask(id) {
-      // CASCADE en DB elimina subtareas automáticamente
+      // CAOS no expone un endpoint de borrado — se quita localmente y
+      // reaparecerá en el próximo poll. Pendiente: agregar delete-task a CAOS.
       setState(s => ({ ...s, tasks: s.tasks.filter(t => t.id !== id && t.parentId !== id) }));
-      supabase.from('tasks').delete().eq('id', id).then(({ error }) => logDbError('eliminar tarea', error));
     },
 
     createAssemblyFromQueue(kind) {
@@ -545,11 +521,13 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
           status: 'backlog' as const, owner: 'Paola' as const, priority: 'Alta' as const,
           source: `assembly:${a.id}`, done: false, createdAt: now(), updatedAt: now(),
         };
-        supabase.from('tasks').insert({
-          id: t.id, workspace_id: WORKSPACE_ID, title: t.title,
-          status: t.status, owner: t.owner, priority: t.priority,
-          source: t.source, done: false, created_at: t.createdAt, updated_at: t.updatedAt,
-        }).then(({ error }) => logDbError('crear tarea desde assembly', error));
+        caosAddTask({ title: t.title, status: t.status, owner: t.owner, priority: t.priority, source: t.source })
+          .then(realId => {
+            if (realId && realId !== t.id) {
+              setState(s2 => ({ ...s2, tasks: s2.tasks.map(x => x.id === t.id ? { ...x, id: realId } : x) }));
+            }
+          })
+          .catch(err => logDbError('crear tarea desde assembly (CAOS)', { message: String(err) }));
         supabase.from('assemblies').update({ status: 'ticket', updated_at: now() }).eq('id', id).then(({ error }) => logDbError('actualizar assembly a ticket', error));
         return {
           ...s,
@@ -600,11 +578,13 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
 
         if (kind === 'Tarea') {
           const t = { id: uid('task'), title, status: 'today' as const, owner: 'Paola' as const, priority: 'Alta' as const, source: 'Sticker → Tarea', done: false, createdAt: now(), updatedAt: now() };
-          supabase.from('tasks').insert({
-            id: t.id, workspace_id: WORKSPACE_ID, title, status: 'today', owner: 'Paola',
-            priority: 'Alta', source: 'Sticker → Tarea', done: false,
-            created_at: t.createdAt, updated_at: t.updatedAt,
-          }).then(({ error }) => logDbError('quick assemble: crear tarea', error));
+          caosAddTask({ title: t.title, status: t.status, owner: t.owner, priority: t.priority, source: t.source })
+            .then(realId => {
+              if (realId && realId !== t.id) {
+                setState(s2 => ({ ...s2, tasks: s2.tasks.map(x => x.id === t.id ? { ...x, id: realId } : x) }));
+              }
+            })
+            .catch(err => logDbError('quick assemble: crear tarea (CAOS)', { message: String(err) }));
           return { ...s, tasks: [t, ...s.tasks], stickers: deselected };
         }
 
@@ -712,7 +692,6 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
 
     addAiTasks(generated: GeneratedTask[]) {
       const newTasks: Task[] = [];
-      const dbRows: object[] = [];
       const t = now();
 
       generated.forEach(g => {
@@ -724,13 +703,15 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
           done: false, createdAt: t, updatedAt: t,
         };
         newTasks.push(root);
-        dbRows.push({
-          id: root.id, workspace_id: WORKSPACE_ID, title: root.title,
-          status: root.status, owner: root.owner, priority: root.priority,
-          due_at: root.dueAt ?? null, source: root.source, done: false,
-          created_at: t, updated_at: t,
-        });
+        caosAddTask({ title: root.title, status: root.status, owner: root.owner, priority: root.priority, dueAt: root.dueAt, source: root.source })
+          .then(realId => {
+            if (realId && realId !== root.id) {
+              setState(s2 => ({ ...s2, tasks: s2.tasks.map(x => x.id === root.id ? { ...x, id: realId } : x) }));
+            }
+          })
+          .catch(err => logDbError('crear tarea IA (CAOS)', { message: String(err) }));
 
+        // Subtareas: CAOS no soporta parent_id — se sincronizan como tareas planas
         g.subtasks.forEach(subTitle => {
           const sub: Task = {
             id: uid('task'), title: subTitle,
@@ -739,17 +720,17 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
             done: false, createdAt: t, updatedAt: t,
           };
           newTasks.push(sub);
-          dbRows.push({
-            id: sub.id, workspace_id: WORKSPACE_ID, title: sub.title,
-            status: sub.status, owner: sub.owner, priority: sub.priority,
-            parent_id: rootId, source: sub.source, done: false,
-            created_at: t, updated_at: t,
-          });
+          caosAddTask({ title: sub.title, status: sub.status, owner: sub.owner, priority: sub.priority, source: sub.source })
+            .then(realId => {
+              if (realId && realId !== sub.id) {
+                setState(s2 => ({ ...s2, tasks: s2.tasks.map(x => x.id === sub.id ? { ...x, id: realId } : x) }));
+              }
+            })
+            .catch(err => logDbError('crear subtarea IA (CAOS)', { message: String(err) }));
         });
       });
 
       setState(s => ({ ...s, tasks: [...newTasks, ...s.tasks] }));
-      supabase.from('tasks').insert(dbRows).then(({ error }) => logDbError('crear tareas IA', error));
     },
 
     forceSyncToCloud() {
