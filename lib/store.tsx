@@ -12,6 +12,13 @@ const STORAGE_KEY = 'LANKA_HQ_NEXT_V2';
 const uid = (prefix: string) => `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 const now = () => new Date().toISOString();
 
+// Surfaces Supabase write failures instead of silently swallowing them (fire-and-forget masked real errors)
+function logDbError(context: string, error: { message: string } | null) {
+  if (error) {
+    console.error(`[Lanka HQ] Error guardando (${context}):`, error.message);
+  }
+}
+
 // ─── localStorage fallback ────────────────────────────────────────────────────
 
 function saveLocal(s: LankaState) {
@@ -127,7 +134,7 @@ function rowToCase(row: Record<string, any>): ClientCase {
 // ─── Bulk seed (used on first run / import) ───────────────────────────────────
 
 async function seedDB(s: LankaState) {
-  await supabase.from('workspace').upsert({
+  const { error: wsErr } = await supabase.from('workspace').upsert({
     id: WORKSPACE_ID,
     hypothesis: s.strategy.hypothesis,
     mission: s.strategy.mission,
@@ -138,18 +145,20 @@ async function seedDB(s: LankaState) {
     roadmap: s.roadmap ?? [],
     updated_at: now(),
   });
+  logDbError('seed workspace', wsErr);
 
   if (s.stickers.length) {
-    await supabase.from('stickers').upsert(
+    const { error } = await supabase.from('stickers').upsert(
       s.stickers.map(st => ({
         id: st.id, workspace_id: WORKSPACE_ID, column_id: st.columnId,
         title: st.title, note: st.note, tag: st.tag ?? '',
         created_at: st.createdAt, updated_at: st.updatedAt,
       }))
     );
+    logDbError('seed stickers', error);
   }
   if (s.tasks.length) {
-    await supabase.from('tasks').upsert(
+    const { error } = await supabase.from('tasks').upsert(
       s.tasks.map(t => ({
         id: t.id, workspace_id: WORKSPACE_ID, title: t.title,
         status: t.status, owner: t.owner, priority: t.priority,
@@ -158,27 +167,30 @@ async function seedDB(s: LankaState) {
         done: t.done, created_at: t.createdAt, updated_at: t.updatedAt,
       }))
     );
+    logDbError('seed tasks', error);
   }
   if (s.assemblies.length) {
-    await supabase.from('assemblies').upsert(
+    const { error } = await supabase.from('assemblies').upsert(
       s.assemblies.map(a => ({
         id: a.id, workspace_id: WORKSPACE_ID, sticker_ids: a.stickerIds,
         kind: a.kind, title: a.title, body: a.body, status: a.status,
         created_at: a.createdAt, updated_at: a.updatedAt,
       }))
     );
+    logDbError('seed assemblies', error);
   }
   if (s.vault.length) {
-    await supabase.from('vault_items').upsert(
+    const { error } = await supabase.from('vault_items').upsert(
       s.vault.map(v => ({
         id: v.id, workspace_id: WORKSPACE_ID, title: v.title,
         kind: v.kind, body: v.body, result: v.result,
         lesson: v.lesson, rating: v.rating, created_at: v.createdAt,
       }))
     );
+    logDbError('seed vault', error);
   }
   if (s.cases?.length) {
-    await supabase.from('client_cases').upsert(
+    const { error } = await supabase.from('client_cases').upsert(
       s.cases.map(c => ({
         id: c.id, workspace_id: WORKSPACE_ID, code: c.code,
         sector: c.sector, size: c.size, stage: c.stage,
@@ -191,6 +203,7 @@ async function seedDB(s: LankaState) {
         created_at: c.createdAt, updated_at: c.updatedAt,
       }))
     );
+    logDbError('seed client_cases', error);
   }
 }
 
@@ -212,6 +225,21 @@ async function loadFromDB(): Promise<LankaState | null> {
     if (wsRes.error) throw wsRes.error;
 
     const ws = wsRes.data;
+
+    // Type-guard every JSONB column: a wrong shape here (e.g. object instead of
+    // array) crashes the whole client-side render with no server-side signal —
+    // this is what broke `kpis` in production. Coerce to default on mismatch.
+    const kpis = Array.isArray(ws.kpis) ? ws.kpis : defaultState.kpis;
+    const modeloRaw = Array.isArray(ws.modelo) ? (ws.modelo as ModeloSection[]) : null;
+    const roadmap = Array.isArray(ws.roadmap) ? (ws.roadmap as RoadmapItem[]) : defaultState.roadmap;
+    const config = ws.config && typeof ws.config === 'object' && !Array.isArray(ws.config)
+      ? { ...DEFAULT_CONFIG, ...(ws.config as Partial<WorkspaceConfig>) }
+      : DEFAULT_CONFIG;
+
+    if (!Array.isArray(ws.kpis) || (ws.modelo != null && !Array.isArray(ws.modelo)) || (ws.roadmap != null && !Array.isArray(ws.roadmap)) || (ws.config != null && (typeof ws.config !== 'object' || Array.isArray(ws.config)))) {
+      console.error('[Lanka HQ] workspace JSONB con forma inesperada — usando defaults para el campo afectado en vez de crashear.');
+    }
+
     return {
       version: 2,
       strategy: {
@@ -219,10 +247,10 @@ async function loadFromDB(): Promise<LankaState | null> {
         mission:       ws.mission       ?? defaultState.strategy.mission,
         currentFocus:  ws.current_focus ?? defaultState.strategy.currentFocus,
       },
-      config:        ws.config ? { ...DEFAULT_CONFIG, ...(ws.config as Partial<WorkspaceConfig>) } : DEFAULT_CONFIG,
-      kpis:          ws.kpis ?? defaultState.kpis,
-      modelo:        mergeModelo(ws.modelo as ModeloSection[] | null),
-      roadmap:       (ws.roadmap as RoadmapItem[] | null) ?? defaultState.roadmap,
+      config,
+      kpis,
+      modelo:        mergeModelo(modeloRaw),
+      roadmap,
       stickers:      (stRes.data   ?? []).map(r => rowToSticker(r)),
       tasks:         (taskRes.data ?? []).map(rowToTask),
       assemblies:    (asmRes.data  ?? []).map(rowToAssembly),
@@ -319,7 +347,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         modelo:        state.modelo,
         roadmap:       state.roadmap,
         updated_at:    now(),
-      }).then(() => undefined);
+      }).then(({ error }) => logDbError('sync workspace', error));
     }, 1500);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.strategy, state.kpis, state.config, state.modelo, state.roadmap, loaded]);
@@ -402,7 +430,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       supabase.from('stickers').insert({
         id: st.id, workspace_id: WORKSPACE_ID, column_id: columnId,
         title: st.title, note: '', tag, created_at: st.createdAt, updated_at: st.updatedAt,
-      }).then(() => undefined);
+      }).then(({ error }) => logDbError('crear sticker', error));
     },
 
     updateSticker(id, patch) {
@@ -412,12 +440,12 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       if (patch.note     !== undefined) db.note      = patch.note;
       if (patch.tag      !== undefined) db.tag       = patch.tag;
       if (patch.columnId !== undefined) db.column_id = patch.columnId;
-      supabase.from('stickers').update(db).eq('id', id).then(() => undefined);
+      supabase.from('stickers').update(db).eq('id', id).then(({ error }) => logDbError('actualizar sticker', error));
     },
 
     deleteSticker(id) {
       setState(s => ({ ...s, stickers: s.stickers.filter(st => st.id !== id), assemblyQueue: s.assemblyQueue.filter(x => x !== id) }));
-      supabase.from('stickers').delete().eq('id', id).then(() => undefined);
+      supabase.from('stickers').delete().eq('id', id).then(({ error }) => logDbError('eliminar sticker', error));
     },
 
     // selected is UI-only, never written to DB
@@ -458,7 +486,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         reminder_at: t.reminderAt ?? null, source: t.source ?? null,
         parent_id: t.parentId ?? null,
         done: false, created_at: t.createdAt, updated_at: t.updatedAt,
-      }).then(() => undefined);
+      }).then(({ error }) => logDbError('crear tarea', error));
     },
 
     updateTask(id, patch) {
@@ -471,13 +499,13 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       if (patch.done        !== undefined) db.done        = patch.done;
       if (patch.dueAt       !== undefined) db.due_at      = patch.dueAt || null;
       if (patch.reminderAt  !== undefined) db.reminder_at = patch.reminderAt;
-      supabase.from('tasks').update(db).eq('id', id).then(() => undefined);
+      supabase.from('tasks').update(db).eq('id', id).then(({ error }) => logDbError('actualizar tarea', error));
     },
 
     deleteTask(id) {
       // CASCADE en DB elimina subtareas automáticamente
       setState(s => ({ ...s, tasks: s.tasks.filter(t => t.id !== id && t.parentId !== id) }));
-      supabase.from('tasks').delete().eq('id', id).then(() => undefined);
+      supabase.from('tasks').delete().eq('id', id).then(({ error }) => logDbError('eliminar tarea', error));
     },
 
     createAssemblyFromQueue(kind) {
@@ -494,7 +522,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
           id: a.id, workspace_id: WORKSPACE_ID, sticker_ids: a.stickerIds,
           kind, title: a.title, body: a.body, status: 'draft',
           created_at: a.createdAt, updated_at: a.updatedAt,
-        }).then(() => undefined);
+        }).then(({ error }) => logDbError('crear assembly', error));
         return { ...s, assemblyQueue: [], assemblies: [a, ...s.assemblies] };
       });
     },
@@ -505,7 +533,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       if (patch.title  !== undefined) db.title  = patch.title;
       if (patch.body   !== undefined) db.body   = patch.body;
       if (patch.status !== undefined) db.status = patch.status;
-      supabase.from('assemblies').update(db).eq('id', id).then(() => undefined);
+      supabase.from('assemblies').update(db).eq('id', id).then(({ error }) => logDbError('actualizar assembly', error));
     },
 
     assemblyToTask(id) {
@@ -521,8 +549,8 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
           id: t.id, workspace_id: WORKSPACE_ID, title: t.title,
           status: t.status, owner: t.owner, priority: t.priority,
           source: t.source, done: false, created_at: t.createdAt, updated_at: t.updatedAt,
-        }).then(() => undefined);
-        supabase.from('assemblies').update({ status: 'ticket', updated_at: now() }).eq('id', id).then(() => undefined);
+        }).then(({ error }) => logDbError('crear tarea desde assembly', error));
+        supabase.from('assemblies').update({ status: 'ticket', updated_at: now() }).eq('id', id).then(({ error }) => logDbError('actualizar assembly a ticket', error));
         return {
           ...s,
           tasks: [t, ...s.tasks],
@@ -536,11 +564,11 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         const a = s.assemblies.find(x => x.id === id);
         if (!a) return s;
         const v = { id: uid('vault'), title: a.title, kind: a.kind, body: a.body, result: 'Archivado', lesson: '', rating: 0, createdAt: now() };
-        supabase.from('assemblies').delete().eq('id', id).then(() => undefined);
+        supabase.from('assemblies').delete().eq('id', id).then(({ error }) => logDbError('archivar: eliminar assembly', error));
         supabase.from('vault_items').insert({
           id: v.id, workspace_id: WORKSPACE_ID, title: v.title, kind: v.kind,
           body: v.body, result: v.result, lesson: v.lesson, rating: v.rating, created_at: v.createdAt,
-        }).then(() => undefined);
+        }).then(({ error }) => logDbError('archivar: crear vault item', error));
         return { ...s, assemblies: s.assemblies.filter(x => x.id !== id), vault: [v, ...s.vault] };
       });
     },
@@ -576,7 +604,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
             id: t.id, workspace_id: WORKSPACE_ID, title, status: 'today', owner: 'Paola',
             priority: 'Alta', source: 'Sticker → Tarea', done: false,
             created_at: t.createdAt, updated_at: t.updatedAt,
-          }).then(() => undefined);
+          }).then(({ error }) => logDbError('quick assemble: crear tarea', error));
           return { ...s, tasks: [t, ...s.tasks], stickers: deselected };
         }
 
@@ -584,7 +612,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         supabase.from('assemblies').insert({
           id: a.id, workspace_id: WORKSPACE_ID, sticker_ids: a.stickerIds,
           kind, title, body, status: 'draft', created_at: a.createdAt, updated_at: a.updatedAt,
-        }).then(() => undefined);
+        }).then(({ error }) => logDbError('quick assemble: crear assembly', error));
         return { ...s, assemblies: [a, ...s.assemblies], stickers: deselected };
       });
     },
@@ -652,7 +680,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         sticker_ids: c.stickerIds, filmable: c.filmable,
         started_at: c.startedAt, closed_at: c.closedAt ?? null,
         created_at: c.createdAt, updated_at: c.updatedAt,
-      }).then(() => undefined);
+      }).then(({ error }) => logDbError('crear caso', error));
     },
 
     updateCase(id, patch) {
@@ -674,12 +702,12 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       if (patch.stickerIds      !== undefined) db.sticker_ids      = patch.stickerIds;
       if (patch.filmable        !== undefined) db.filmable         = patch.filmable;
       if (patch.closedAt        !== undefined) db.closed_at        = patch.closedAt ?? null;
-      supabase.from('client_cases').update(db).eq('id', id).then(() => undefined);
+      supabase.from('client_cases').update(db).eq('id', id).then(({ error }) => logDbError('actualizar caso', error));
     },
 
     deleteCase(id) {
       setState(s => ({ ...s, cases: s.cases.filter(c => c.id !== id) }));
-      supabase.from('client_cases').delete().eq('id', id).then(() => undefined);
+      supabase.from('client_cases').delete().eq('id', id).then(({ error }) => logDbError('eliminar caso', error));
     },
 
     addAiTasks(generated: GeneratedTask[]) {
@@ -721,7 +749,7 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       });
 
       setState(s => ({ ...s, tasks: [...newTasks, ...s.tasks] }));
-      supabase.from('tasks').insert(dbRows).then(() => undefined);
+      supabase.from('tasks').insert(dbRows).then(({ error }) => logDbError('crear tareas IA', error));
     },
 
     forceSyncToCloud() {
