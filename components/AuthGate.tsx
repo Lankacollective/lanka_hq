@@ -1,18 +1,25 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
+const PUBLIC_PATHS = ['/diagnostico'];
+
 export function AuthGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isPublic = PUBLIC_PATHS.some(p => pathname?.startsWith(p));
+
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isPublic);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (isPublic) return;
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
@@ -23,7 +30,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     });
 
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [isPublic]);
+
+  if (isPublic) return <>{children}</>;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();

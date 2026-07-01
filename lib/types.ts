@@ -256,6 +256,32 @@ export function maturityBand(score: number) {
   return MATURITY_BANDS.find(b => score >= b.min && score <= b.max) ?? MATURITY_BANDS[0];
 }
 
+// ─── Diagnostic (public form) ─────────────────────────────────────────────────
+
+export type DiagnosticSection = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
+
+export type DiagnosticQuestion = {
+  id: string;
+  question_key: string;
+  section: DiagnosticSection;
+  order_index: number;
+  question_text: string;
+  help_text: string | null;
+  input_type: 'radio' | 'number' | 'text' | 'select' | 'boolean';
+  options: string[] | null;
+  weight: number;
+};
+
+export type DiagnosticResult = {
+  session_id: string;
+  maturity_score: number;
+  maturity_band: 'Caos' | 'Datos' | 'Sistema' | 'Escala';
+  section_scores: Record<DiagnosticSection, number>;
+  ai_summary: string;
+  ai_priorities: Array<{ title: string; detail: string; impact: string }>;
+  ai_quick_wins: Array<{ title: string; action: string; timeline: string }>;
+};
+
 export type LankaState = {
   version: 2;
   strategy: {
