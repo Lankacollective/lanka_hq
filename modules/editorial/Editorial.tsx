@@ -32,6 +32,18 @@ const STATUS_COLOR: Record<EditorialStatus, string> = {
   archivado: 'var(--muted)',
 };
 
+// ─── Search helpers ───────────────────────────────────────────────────────────
+
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics: é→e, ú→u, ñ→n, etc.
+    .replace(/[-_]/g, ' ')           // hyphens/underscores → spaces
+    .replace(/\s+/g, ' ');           // collapse multiple spaces
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function Editorial() {
@@ -61,12 +73,14 @@ export function Editorial() {
     if (statusFilter !== 'Todos') list = list.filter(e => e.status === statusFilter);
     if (tagFilter) list = list.filter(e => e.tags.includes(tagFilter));
     if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(e =>
-        e.title.toLowerCase().includes(q) ||
-        e.body.toLowerCase().includes(q) ||
-        e.tags.some(t => t.toLowerCase().includes(q))
-      );
+      const tokens = normalizeText(search).split(' ').filter(Boolean);
+      list = list.filter(e => {
+        const haystack = normalizeText([
+          e.title, e.body, e.tags.join(' '), e.category,
+          e.source, e.relatedSeries, e.relatedChapter, e.relatedCase,
+        ].join(' '));
+        return tokens.every(token => haystack.includes(token));
+      });
     }
     return list;
   }, [entries, catFilter, statusFilter, tagFilter, search]);
@@ -239,7 +253,7 @@ export function Editorial() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar en título, cuerpo o tags..."
+          placeholder="Buscar en todos los campos..."
           className="min-w-[220px] flex-1 border border-[var(--line)] bg-[var(--surface)] px-3 py-2 font-mono text-[11px] text-[var(--ink)] outline-none focus:border-[var(--acid)] placeholder:text-[var(--muted)]"
         />
         <select
