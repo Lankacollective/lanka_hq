@@ -1,4 +1,4 @@
-export type TabId = 'hoy' | 'board' | 'sistema' | 'boveda' | 'casos' | 'modelo' | 'ruta' | 'config';
+export type TabId = 'hoy' | 'board' | 'sistema' | 'boveda' | 'casos' | 'modelo' | 'editorial' | 'ruta' | 'config';
 
 export type StickerColumnId = 'sistema' | 'tareas' | 'mercado' | 'storytelling' | 'sinResponder';
 export type TaskStatus = 'backlog' | 'today' | 'doing' | 'waiting' | 'done';
@@ -97,6 +97,41 @@ export type Reminder = {
   sentAt?: string;
   createdAt: string;
 };
+
+// ─── Editorial OS ─────────────────────────────────────────────────────────────
+
+export const EDITORIAL_CATEGORIES = [
+  'Voz Paola',
+  'Series activas',
+  'Estructura madre',
+  'Checklists de captura',
+  'Índice F&B',
+  'Prompts IA',
+  'Casos anónimos',
+  'Comunidad',
+  'Ejemplos aprobados',
+  'Decisiones editoriales',
+] as const;
+
+export type EditorialCategory = typeof EDITORIAL_CATEGORIES[number];
+export type EditorialStatus = 'activo' | 'borrador' | 'archivado';
+
+export type EditorialEntry = {
+  id: string;
+  title: string;
+  category: EditorialCategory;
+  tags: string[];
+  body: string;
+  source: string;
+  status: EditorialStatus;
+  relatedSeries: string;
+  relatedChapter: string;
+  relatedCase: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// ─── Workspace Config ─────────────────────────────────────────────────────────
 
 export type WorkspaceConfig = {
   workspaceName: string;
@@ -300,6 +335,7 @@ export type LankaState = {
   cases: ClientCase[];
   modelo: ModeloSection[];
   roadmap: RoadmapItem[];
+  editorial: EditorialEntry[];
   reminders: Reminder[];
   activity: string[];
 };
