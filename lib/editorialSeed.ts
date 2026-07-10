@@ -92,6 +92,12 @@ PÚBLICO
 Operadores de F&B, fundadores de restaurantes, cocineros que dan el salto empresarial.
 No es para chefs aspiracionales. Es para el que ya tiene mesas y no sabe si está ganando.
 
+QUÉ CAPTURAR EN CADA EDICIÓN
+- El número específico del problema (food cost, labor cost, punto de equilibrio)
+- El sistema que lo explica en términos simples
+- La acción concreta que el lector puede ejecutar esta semana
+- Cualquier dato que cambie la percepción del operador
+
 FORMATO
 - 1 problema real con número
 - 1 sistema que lo explica
@@ -137,7 +143,7 @@ LO QUE SE DOCUMENTA
 - Decisiones reales con el razonamiento detrás
 - Errores y lo que cambiaron
 - KPIs cuando estén disponibles y tengan contexto
-- Herramientas y sistemas adoptados con resultado
+- Herramientas y sistemas adoptados con resultado (food cost, menu engineering, inventario)
 
 LO QUE NO SE DOCUMENTA
 - Teoría sin evidencia propia
@@ -179,7 +185,7 @@ SECCIONES PRINCIPALES
    - Qué pasa cuando las mesas están llenas pero no hay margen
    - Análisis por canal de venta
 
-4. INGENIERÍA DE MENÚ
+4. INGENIERÍA DE MENÚ (menu engineering)
    - Mezcla de ventas (mix)
    - Margen de contribución por ítem
    - Categorización: estrella / vaca / interrogante / perro
@@ -254,6 +260,7 @@ MECANISMOS DE PARTICIPACIÓN
 1. Encuesta mensual en El Ticket (1 pregunta concreta, sin email requerido)
 2. Pregunta abierta en LinkedIn (1 vez por semana, respuesta manual)
 3. Acceso anticipado a herramientas del diagnóstico (beta cerrada, por invitación)
+4. Votación de contenido: "Voten cuál serie se va a prueba este mes" — 1 vez por trimestre en LinkedIn + El Ticket
 
 LO QUE NO PEDIMOS A LA COMUNIDAD
 - Que compre sin haber tenido una interacción de valor primero
