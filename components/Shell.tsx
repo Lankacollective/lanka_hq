@@ -12,6 +12,7 @@ import { Config } from '@/modules/config/Config';
 import { Casos } from '@/modules/casos/Casos';
 import { Modelo } from '@/modules/modelo/Modelo';
 import { HojaDeRuta } from '@/modules/ruta/HojaDeRuta';
+import { Editorial } from '@/modules/editorial/Editorial';
 
 const tabs: Array<{ id: TabId; label: string }> = [
   { id: 'hoy',     label: '01 · Hoy' },
@@ -19,8 +20,9 @@ const tabs: Array<{ id: TabId; label: string }> = [
   { id: 'sistema', label: '03 · Sistema' },
   { id: 'boveda',  label: '04 · Bóveda' },
   { id: 'casos',   label: '05 · Casos' },
-  { id: 'modelo',  label: '06 · Modelo' },
-  { id: 'ruta',    label: '⬡ Hoja de Ruta' },
+  { id: 'modelo',    label: '06 · Modelo' },
+  { id: 'editorial', label: '07 · Editorial' },
+  { id: 'ruta',      label: '⬡ Hoja de Ruta' },
   { id: 'config',  label: '⚙ Config' },
 ];
 
@@ -29,8 +31,9 @@ function Active({ tab }: { tab: TabId }) {
   if (tab === 'board')   return <Board />;
   if (tab === 'sistema') return <Sistema />;
   if (tab === 'casos')   return <Casos />;
-  if (tab === 'modelo')  return <Modelo />;
-  if (tab === 'ruta')    return <HojaDeRuta />;
+  if (tab === 'modelo')    return <Modelo />;
+  if (tab === 'editorial') return <Editorial />;
+  if (tab === 'ruta')      return <HojaDeRuta />;
   if (tab === 'config')  return <Config />;
   return <Boveda />;
 }

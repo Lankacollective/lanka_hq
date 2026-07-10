@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import { defaultState } from './defaultState';
 import { supabase, WORKSPACE_ID } from './supabase';
 import { caosAddTask, caosGetTasks, caosUpdateTask } from './caos';
-import type { AssemblyKind, ClientCase, LankaState, ModeloSection, Owner, Priority, RoadmapItem, StickerColumnId, Task, TaskStatus, VaultItem, WorkspaceConfig } from './types';
+import type { AssemblyKind, ClientCase, EditorialEntry, LankaState, ModeloSection, Owner, Priority, RoadmapItem, StickerColumnId, Task, TaskStatus, VaultItem, WorkspaceConfig } from './types';
 import { DEFAULT_CONFIG, MODELO_INDEX } from './types';
 import type { GeneratedTask } from '@/app/api/generate-tasks/route';
 
@@ -120,16 +120,18 @@ function rowToCase(row: Record<string, any>): ClientCase {
 // ─── Bulk seed (used on first run / import) ───────────────────────────────────
 
 async function seedDB(s: LankaState) {
-  const { error: wsErr } = await supabase.from('workspace').upsert({
+  const { error: wsErr } = await supabase.from('workspaces').upsert({
     id: WORKSPACE_ID,
-    hypothesis: s.strategy.hypothesis,
-    mission: s.strategy.mission,
-    current_focus: s.strategy.currentFocus,
-    kpis: s.kpis,
-    config:  s.config ?? DEFAULT_CONFIG,
-    modelo:  s.modelo ?? [],
-    roadmap: s.roadmap ?? [],
-    updated_at: now(),
+    data: {
+      hypothesis:    s.strategy.hypothesis,
+      mission:       s.strategy.mission,
+      current_focus: s.strategy.currentFocus,
+      kpis:          s.kpis,
+      config:        s.config ?? DEFAULT_CONFIG,
+      modelo:        s.modelo ?? [],
+      roadmap:       s.roadmap ?? [],
+      editorial:     s.editorial ?? [],
+    },
   });
   logDbError('seed workspace', wsErr);
 
@@ -187,7 +189,7 @@ async function seedDB(s: LankaState) {
 async function loadFromDB(): Promise<LankaState | null> {
   try {
     const [wsRes, stRes, tasks, asmRes, vaultRes, casesRes] = await Promise.all([
-      supabase.from('workspace').select('*').eq('id', WORKSPACE_ID).single(),
+      supabase.from('workspaces').select('*').eq('id', WORKSPACE_ID).single(),
       supabase.from('stickers').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
       caosGetTasks().catch(() => [] as Task[]),
       supabase.from('assemblies').select('*').eq('workspace_id', WORKSPACE_ID).order('created_at', { ascending: false }),
@@ -199,14 +201,16 @@ async function loadFromDB(): Promise<LankaState | null> {
     if (wsRes.error?.code === 'PGRST116') return null;
     if (wsRes.error) throw wsRes.error;
 
-    const ws = wsRes.data;
+    // workspaces table: { id: text, data: jsonb } — all app state lives in data
+    const ws = ((wsRes.data as Row).data ?? {}) as Row;
 
-    // Type-guard every JSONB column: a wrong shape here (e.g. object instead of
+    // Type-guard every JSONB field: a wrong shape here (e.g. object instead of
     // array) crashes the whole client-side render with no server-side signal —
     // this is what broke `kpis` in production. Coerce to default on mismatch.
     const kpis = Array.isArray(ws.kpis) ? ws.kpis : defaultState.kpis;
     const modeloRaw = Array.isArray(ws.modelo) ? (ws.modelo as ModeloSection[]) : null;
     const roadmap = Array.isArray(ws.roadmap) ? (ws.roadmap as RoadmapItem[]) : defaultState.roadmap;
+    const editorial = Array.isArray(ws.editorial) ? (ws.editorial as EditorialEntry[]) : [];
     const config = ws.config && typeof ws.config === 'object' && !Array.isArray(ws.config)
       ? { ...DEFAULT_CONFIG, ...(ws.config as Partial<WorkspaceConfig>) }
       : DEFAULT_CONFIG;
@@ -226,6 +230,7 @@ async function loadFromDB(): Promise<LankaState | null> {
       kpis,
       modelo:        mergeModelo(modeloRaw),
       roadmap,
+      editorial,
       stickers:      (stRes.data   ?? []).map(r => rowToSticker(r)),
       tasks,
       assemblies:    (asmRes.data  ?? []).map(rowToAssembly),
@@ -266,6 +271,9 @@ type Store = {
   updateModeloSection: (key: string, patch: Partial<ModeloSection>) => void;
   updateRoadmapItem: (id: string, patch: Partial<RoadmapItem>) => void;
   addRoadmapItem: (patch: Partial<RoadmapItem>) => void;
+  addEditorial: (patch: Omit<EditorialEntry, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  updateEditorial: (id: string, patch: Partial<EditorialEntry>) => void;
+  deleteEditorial: (id: string) => void;
   exportJson: () => void;
   importJson: (file: File) => Promise<void>;
   quickAssemble: (kind: AssemblyKind) => void;
@@ -289,9 +297,12 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
         setState(dbState);
         saveLocal(dbState);
       } else {
-        // No workspace row yet: try localStorage, then seed DB from it
+        // No workspace row yet: try localStorage, then seed DB from it.
+        // Ensure fields added after first run (like editorial) are always initialized.
         const local = loadLocal();
-        const seed = local ?? defaultState;
+        const seed: LankaState = local
+          ? { ...local, editorial: local.editorial ?? [] }
+          : defaultState;
         setState(seed);
         await seedDB(seed);
       }
@@ -312,20 +323,22 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
     if (!loaded) return;
     if (wsTimer.current) clearTimeout(wsTimer.current);
     wsTimer.current = setTimeout(() => {
-      supabase.from('workspace').upsert({
+      supabase.from('workspaces').upsert({
         id: WORKSPACE_ID,
-        hypothesis:    state.strategy.hypothesis,
-        mission:       state.strategy.mission,
-        current_focus: state.strategy.currentFocus,
-        kpis:          state.kpis,
-        config:        state.config,
-        modelo:        state.modelo,
-        roadmap:       state.roadmap,
-        updated_at:    now(),
+        data: {
+          hypothesis:    state.strategy.hypothesis,
+          mission:       state.strategy.mission,
+          current_focus: state.strategy.currentFocus,
+          kpis:          state.kpis,
+          config:        state.config,
+          modelo:        state.modelo,
+          roadmap:       state.roadmap,
+          editorial:     state.editorial,
+        },
       }).then(({ error }) => logDbError('sync workspace', error));
     }, 1500);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.strategy, state.kpis, state.config, state.modelo, state.roadmap, loaded]);
+  }, [state.strategy, state.kpis, state.config, state.modelo, state.roadmap, state.editorial, loaded]);
 
   // ── Realtime: per-table subscriptions ───────────────────────────────────────
   useEffect(() => {
@@ -731,6 +744,35 @@ export function LankaProvider({ children }: { children: React.ReactNode }) {
       });
 
       setState(s => ({ ...s, tasks: [...newTasks, ...s.tasks] }));
+    },
+
+    addEditorial(patch) {
+      const e: EditorialEntry = {
+        id: uid('ed'),
+        title: patch.title,
+        category: patch.category,
+        tags: patch.tags ?? [],
+        body: patch.body ?? '',
+        source: patch.source ?? '',
+        status: patch.status ?? 'borrador',
+        relatedSeries: patch.relatedSeries ?? '',
+        relatedChapter: patch.relatedChapter ?? '',
+        relatedCase: patch.relatedCase ?? '',
+        createdAt: now(),
+        updatedAt: now(),
+      };
+      setState(s => ({ ...s, editorial: [e, ...(s.editorial ?? [])] }));
+    },
+
+    updateEditorial(id, patch) {
+      setState(s => ({
+        ...s,
+        editorial: (s.editorial ?? []).map(e => e.id === id ? { ...e, ...patch, updatedAt: now() } : e),
+      }));
+    },
+
+    deleteEditorial(id) {
+      setState(s => ({ ...s, editorial: (s.editorial ?? []).filter(e => e.id !== id) }));
     },
 
     forceSyncToCloud() {
