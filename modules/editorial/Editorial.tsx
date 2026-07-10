@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useLanka } from '@/lib/store';
 import { EDITORIAL_CATEGORIES } from '@/lib/types';
 import type { EditorialCategory, EditorialEntry, EditorialStatus } from '@/lib/types';
+import { EDITORIAL_SEED_V1 } from '@/lib/editorialSeed';
 
 type FormState = Omit<EditorialEntry, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -46,6 +47,7 @@ export function Editorial() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [tagInput, setTagInput] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [seedResult, setSeedResult] = useState<{ added: number; skipped: number } | null>(null);
 
   const allTags = useMemo(() => {
     const s = new Set<string>();
@@ -74,6 +76,23 @@ export function Editorial() {
     entries.forEach(e => { m[e.category] = (m[e.category] ?? 0) + 1; });
     return m;
   }, [entries]);
+
+  function loadSeed() {
+    let added = 0;
+    let skipped = 0;
+    EDITORIAL_SEED_V1.forEach(seed => {
+      const exists = entries.some(
+        e => e.title.trim().toLowerCase() === seed.title.trim().toLowerCase()
+      );
+      if (exists) {
+        skipped++;
+      } else {
+        addEditorial(seed);
+        added++;
+      }
+    });
+    setSeedResult({ added, skipped });
+  }
 
   function startAdd() {
     setEditingId(null);
@@ -146,13 +165,42 @@ export function Editorial() {
             Metodología, voz, series, prompts y decisiones editoriales de @pao.sag y LANKA.
           </p>
         </div>
-        <button
-          onClick={startAdd}
-          className="border border-[var(--acid)] bg-[var(--acid)] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-black hover:opacity-90 transition-opacity"
-        >
-          + Nueva entrada
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadSeed}
+            title="Carga las 8 entradas de la Base Editorial v0.1. Idempotente: no duplica entradas existentes."
+            className="border border-[var(--line)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--muted)] transition-colors"
+          >
+            Base v0.1
+          </button>
+          <button
+            onClick={startAdd}
+            className="border border-[var(--acid)] bg-[var(--acid)] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-black hover:opacity-90 transition-opacity"
+          >
+            + Nueva entrada
+          </button>
+        </div>
       </div>
+
+      {/* ── Seed load feedback ── */}
+      {seedResult !== null && (
+        <div className="mb-4 flex items-center justify-between border border-[var(--line)] bg-[var(--surface)] px-4 py-2">
+          <p className="font-mono text-[10px] text-[var(--muted)]">
+            {seedResult.added > 0 && (
+              <span className="text-[var(--acid)]">{seedResult.added} entrada{seedResult.added !== 1 ? 's' : ''} cargada{seedResult.added !== 1 ? 's' : ''}</span>
+            )}
+            {seedResult.added > 0 && seedResult.skipped > 0 && ' · '}
+            {seedResult.skipped > 0 && `${seedResult.skipped} ya existía${seedResult.skipped !== 1 ? 'n' : ''}`}
+            {seedResult.added === 0 && seedResult.skipped === 0 && 'Sin cambios'}
+          </p>
+          <button
+            onClick={() => setSeedResult(null)}
+            className="font-mono text-[9px] uppercase text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* ── Inline form (add / edit) ── */}
       {(adding || editingId !== null) && (
