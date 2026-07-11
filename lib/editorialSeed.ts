@@ -551,7 +551,523 @@ CHECKLIST DE CIERRE
 ];
 
 /**
- * Corpus editorial completo: V1 + V2.
+ * Base Editorial v0.3 — 8 entradas: paquete estratégico completo del Capítulo 0
+ * de la serie "Creando un negocio de F&B desde cero" (Morelia, $600,000 MXN, AI first).
+ * Todas en estado 'borrador': Paola las activa o edita después de revisar.
+ * Identificador de versión: EDITORIAL_SEED_V3
+ */
+export const EDITORIAL_SEED_V3: Array<Omit<EditorialEntry, 'id' | 'createdAt' | 'updatedAt'>> = [
+  {
+    title: 'Capítulo 0 — Paquete maestro',
+    category: 'Decisiones editoriales',
+    tags: ['capitulo-0', 'negocio-desde-cero', 'ai-first', 'morelia', 'documentacion'],
+    status: 'borrador',
+    source: 'Base Editorial v0.3',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: 'Capítulo 0',
+    relatedCase: '',
+    body: `FUNCIÓN DEL CAPÍTULO
+Capítulo 0 es el punto de partida público de la serie "Creando un negocio de F&B desde cero". Establece las reglas del juego antes de elegir cualquier concepto: presupuesto, ciudad, límite de capítulos, y el compromiso de gestionar el negocio con IA desde el primer proceso. No presenta una idea de negocio — presenta el marco dentro del cual esa idea tendrá que sobrevivir.
+
+QUÉ DEBE ENTENDER LA AUDIENCIA
+- Que se va a construir un negocio de comida real, con posibilidad real de piloto, no un ejercicio de contenido.
+- Que la ciudad es Morelia y el techo de inversión es $600,000 MXN, sin excepción.
+- Que la serie tiene un límite de 30 capítulos: si el negocio no se sostiene dentro de ese marco, se cierra.
+- Que el modelo debe ser trasladable, replicable y escalable — no una solución única para un solo local.
+- Que la IA participa desde la operación (mercado, compras, inventario, menú, marketing), no como adorno de marketing.
+- Que la comunidad y expertos nacionales e internacionales van a participar activamente, dentro de reglas definidas, no en una votación libre.
+
+CIUDAD INICIAL
+Morelia.
+
+INVERSIÓN MÁXIMA
+$600,000 MXN.
+
+LÍMITE DE LA SERIE
+Máximo 30 capítulos.
+
+MODELO
+Trasladable, replicable y escalable — pensado para poder llevarse a otra ciudad si funciona.
+
+GESTIÓN
+Negocio AI first desde el origen: la IA participa desde el primer proceso, no se añade después.
+
+POSIBILIDAD DE PILOTO O POP-UP
+Si el capítulo demuestra viabilidad suficiente, el negocio puede avanzar a piloto o pop-up real.
+
+PARTICIPACIÓN DE COMUNIDAD
+La audiencia participa dentro del proceso (encuestas, reacciones, ideas), no solo como espectadora.
+
+PARTICIPACIÓN DE EXPERTOS
+Operadores y expertos nacionales e internacionales que ya abrieron negocios entran a la conversación como mesa externa.
+
+QUÉ NO RESUELVE TODAVÍA EL CAPÍTULO 0
+- No define el concepto del negocio.
+- No define el nombre ni la marca.
+- No define el menú ni la propuesta de valor.
+- No investiga todavía el mercado de Morelia — eso es el Capítulo 1.
+- No compromete el piloto o pop-up, solo deja la puerta abierta si el proceso lo justifica.
+
+DECISIÓN FORMAL
+"Se construirá públicamente un negocio F&B AI first en Morelia, con inversión máxima de $600,000 MXN y hasta 30 capítulos. Si demuestra viabilidad suficiente, podrá avanzar a piloto o pop-up."`,
+  },
+
+  {
+    title: 'Capítulo 0 — Posicionamiento y reglas',
+    category: 'Estructura madre',
+    tags: ['capitulo-0', 'negocio-desde-cero', 'ai-first', 'documentacion'],
+    status: 'borrador',
+    source: 'Base Editorial v0.3',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: 'Capítulo 0',
+    relatedCase: '',
+    body: `NOMBRE VISIBLE
+"creando un negocio de F&B desde cero"
+
+DESCRIPTOR
+"un modelo realista, escalable y gestionado con IA."
+
+FRASE ESTRUCTURAL
+"la IA detecta, ordena y propone. las personas deciden, sirven y responden."
+
+TENSIÓN NARRATIVA
+"una idea puede verse increíble y no sobrevivir a la renta, al food cost o a un martes lento."
+
+PROMESA
+Se documentarán investigación, decisiones, números, errores, ideas descartadas, automatizaciones, participación de expertos, reacción de la comunidad y viabilidad final.
+
+QUÉ NO ES
+- un curso genérico
+- una cafetería imaginaria bonita
+- un escaparate de herramientas de IA
+- una serie motivacional para emprendedores
+- una votación abierta sin criterio técnico
+
+REGLAS PÚBLICAS
+- Morelia
+- $600,000 MXN máximo
+- máximo 30 capítulos
+- modelo replicable
+- IA desde la operación
+- expertos reales
+- comunidad dentro del proceso
+- fallas incluidas
+
+REGLAS INTERNAS
+- ninguna opción se elige sin evidencia suficiente
+- la comunidad vota solo entre opciones filtradas
+- la IA no inventa datos ni toma decisiones críticas
+- fuentes y supuestos quedan documentados
+- cada capítulo produce una decisión concreta
+- cada decisión actualiza la ficha maestra
+- si una idea no es viable, se ajusta o se mata
+- si demuestra potencial real, se plantea piloto o pop-up`,
+  },
+
+  {
+    title: 'Capítulo 0 — Reel principal',
+    category: 'Ejemplos aprobados',
+    tags: ['capitulo-0', 'negocio-desde-cero', 'ai-first', 'morelia', 'reel', 'produccion'],
+    status: 'borrador',
+    source: 'Base Editorial v0.3',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: 'Capítulo 0',
+    relatedCase: '',
+    body: `OBJETIVO
+Presentar públicamente las reglas del Capítulo 0 y activar seguimiento de la serie más la primera encuesta de participación.
+
+DURACIÓN
+35–45 segundos.
+
+GUION APROBADO
+"vamos a construir un negocio de comida desde cero.
+
+morelia.
+$600,000 máximo.
+replicable.
+y gestionado con IA desde el primer proceso.
+
+no una cafetería con un chatbot.
+
+un negocio donde mercado, compras, inventario,
+menú, operación, marketing y clientes
+empiecen a hablar entre sí.
+
+la IA va a investigar, ordenar,
+detectar y proponer.
+
+nosotros vamos a decidir.
+
+también van a entrar operadores y expertos
+que ya abrieron negocios en otros países.
+
+y ustedes van a votar.
+
+pero solo entre las ideas
+que sobrevivan a los números.
+
+máximo 30 capítulos.
+
+si funciona, lo llevamos a piloto.
+si no, lo matamos con respeto.
+
+capítulo cero.
+
+primero ver si merece existir."
+
+CAPTION PRINCIPAL
+"capítulo 0.
+
+morelia. $600,000.
+IA desde operación.
+no desde el caption."
+
+CAPTION ALTERNATIVO
+"vamos a construir un negocio de comida desde cero.
+
+si sobrevive al mercado, los números y la operación,
+tal vez lo abrimos."
+
+CTA PRINCIPAL
+Seguir la serie.
+
+CTA SECUNDARIO
+Responder la primera encuesta.
+
+CONCEPTO DE PORTADA
+Mesa de trabajo + título de la serie / capítulo 0. Debe sentirse como documentación de proceso, no como anuncio de startup.
+
+TEXTOS POSIBLES EN PANTALLA
+- MORELIA
+- $600,000 MXN
+- AI FIRST
+- 30 CAPÍTULOS MÁX.
+- PILOTO SI SOBREVIVE`,
+  },
+
+  {
+    title: 'Capítulo 0 — Dirección creativa y captura',
+    category: 'Checklists de captura',
+    tags: ['capitulo-0', 'produccion', 'captura', 'morelia'],
+    status: 'borrador',
+    source: 'Base Editorial v0.3',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: 'Capítulo 0',
+    relatedCase: '',
+    body: `CONCEPTO
+Documentación de trabajo, no anuncio de lanzamiento.
+
+TOMAS OBLIGATORIAS
+- mapa físico o digital de Morelia
+- $600,000 MXN escrito o impreso
+- tickets acumulados de restaurantes
+- pantalla de LANKA HQ
+- matriz o tabla todavía vacía
+- palabra "logo" escrita y tachada
+- referencias nacionales e internacionales
+- Paola escribiendo o revisando datos
+- videollamada o agenda de futuros expertos
+- una idea descartada
+- IA trabajando sobre información real
+- carpeta o documento "CAPÍTULO 0"
+
+TOMAS DESEABLES
+- calles o zonas de Morelia
+- personas consumiendo sin mostrar rostros claramente
+- menús
+- fachadas
+- estacionamiento o tráfico
+- café frío junto a una tabla
+- manos ordenando papeles
+- errores visibles
+- capturas de research
+- nota de voz
+
+QUÉ NO MOSTRAR
+- hologramas
+- robots
+- gráficos falsos
+- cafetería renderizada como si ya existiera
+- dashboards llenos de datos inventados
+- estética excesiva de startup
+
+EDICIÓN
+- ritmo rápido al inicio y más lento al presentar reglas
+- música instrumental contenida, con tensión, no épica
+- voz en off + dos apariciones breves de Paola a cámara
+- texto solo para palabras clave
+- documental, ligeramente oscuro, con grano
+- planos de 0.8 a 2 segundos
+- subtítulos limpios y pequeños
+
+CHECKLIST OPERATIVO DE CAPTURA
+□ Grabar mapa físico o digital de Morelia
+□ Grabar $600,000 MXN escrito o impreso
+□ Grabar tickets acumulados de restaurantes
+□ Grabar pantalla de LANKA HQ
+□ Grabar matriz o tabla todavía vacía
+□ Grabar la palabra "logo" escrita y tachada
+□ Reunir referencias nacionales e internacionales
+□ Grabar a Paola escribiendo o revisando datos
+□ Grabar videollamada o agenda de futuros expertos
+□ Grabar una idea descartada
+□ Grabar IA trabajando sobre información real
+□ Grabar carpeta o documento "CAPÍTULO 0"
+□ Cubrir tomas deseables disponibles según locación y tiempo
+□ Revisar que ninguna toma incluya elementos de la lista "qué no mostrar"
+□ Confirmar audio limpio para voz en off y las dos apariciones de Paola a cámara
+□ Exportar selects a 06_SELECTS/ el mismo día de captura`,
+  },
+
+  {
+    title: 'Capítulo 0 — Stories y participación inicial',
+    category: 'Comunidad',
+    tags: ['capitulo-0', 'stories', 'comunidad', 'morelia'],
+    status: 'borrador',
+    source: 'Base Editorial v0.3',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: 'Capítulo 0',
+    relatedCase: '',
+    body: `DÍA -1
+
+Story 1:
+"estamos a punto de construir
+un negocio de comida desde cero."
+
+Story 2:
+"morelia.
+$600,000 máximo."
+
+Story 3:
+"todavía no tiene nombre.
+ni logo.
+ni derecho a existir."
+
+Story 4:
+"mañana empiezan los números."
+
+DÍA DE LANZAMIENTO
+
+Story 1:
+Compartir Reel.
+Texto:
+"capítulo 0.
+las reglas."
+
+Story 2:
+"IA desde:
+mercado
+compras
+inventario
+operación
+marketing
+dirección"
+
+Story 3:
+"pero no decide sola.
+
+detecta.
+ordena.
+propone.
+alerta."
+
+Story 4:
+"nosotros decidimos.
+la gente todavía sirve la mesa."
+
+Story 5 — Encuesta:
+"qué momento está peor resuelto en morelia:"
+- desayuno entre semana
+- comida rápida buena
+- tardeo
+- cena casual
+
+Story 6 — Encuesta:
+"qué arruina más una salida:"
+- estacionamiento
+- precio
+- espera
+- servicio
+
+OBJETIVO DE PARTICIPACIÓN
+Activar el primer pulso de la comunidad antes de definir cualquier concepto: medir cuántas personas siguen la serie desde el día 0 y cuántas responden ambas encuestas.
+
+QUÉ DATOS BUSCAMOS
+Qué momentos de consumo están peor resueltos en Morelia y qué fricciones arruinan más una salida — insumos directos para investigar el Capítulo 1, no para definir el concepto todavía.
+
+POR QUÉ TODAVÍA NO SE LANZA EL FORMULARIO LARGO
+Porque el Capítulo 0 solo establece reglas y abre participación ligera; un formulario largo requiere que primero exista suficiente contexto y confianza con la audiencia, que se construye durante los primeros capítulos.
+
+CTA PRINCIPAL
+Seguir la serie.
+
+CTA SECUNDARIO
+Responder la encuesta.`,
+  },
+
+  {
+    title: 'Capítulo 0 — Arquitectura AI first',
+    category: 'Decisiones editoriales',
+    tags: ['capitulo-0', 'ai-first', 'documentacion'],
+    status: 'borrador',
+    source: 'Base Editorial v0.3',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: 'Capítulo 0',
+    relatedCase: '',
+    body: `FUNCIÓN DE LA IA EN EL CAPÍTULO 0
+- estructurar reglas
+- crear ficha maestra
+- clasificar respuestas
+- detectar preguntas
+- preparar Capítulo 1
+- organizar fuentes
+- registrar hipótesis
+- diferenciar dato de supuesto
+- preparar entrevistas por tipo de experto
+- documentar decisiones
+
+PRINCIPIO
+dato → lectura IA → recomendación → aprobación → acción → resultado → aprendizaje.
+
+LÍMITES HUMANOS
+La IA no decide:
+- qué necesidad es real
+- qué concepto se construirá
+- qué fuente es confiable sin validación
+- qué negocio merece inversión
+- qué contenido se publica
+- qué opción pasa a piloto
+
+DEBE DISTINGUIR CLARAMENTE
+- qué hace la IA
+- qué puede automatizarse
+- qué requiere aprobación humana
+- qué nunca se delega`,
+  },
+
+  {
+    title: 'Capítulo 0 — Documentación y archivo',
+    category: 'Estructura madre',
+    tags: ['capitulo-0', 'documentacion', 'negocio-desde-cero'],
+    status: 'borrador',
+    source: 'Base Editorial v0.3',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: 'Capítulo 0',
+    relatedCase: '',
+    body: `FICHA MAESTRA INICIAL
+- estado: capítulo 0
+- ciudad: Morelia
+- presupuesto máximo: $600,000 MXN
+- naturaleza: negocio ficticio con posibilidad de piloto
+- modelo: trasladable, replicable y escalable
+- gestión: AI first
+- formato: pendiente
+- concepto: pendiente
+- cliente: pendiente
+- ocasión: pendiente
+- próxima pregunta: qué oportunidades de consumo existen en Morelia
+
+DECISIÓN DEL CAPÍTULO
+"Se construirá públicamente un negocio F&B AI first en Morelia, con inversión máxima de $600,000 MXN y hasta 30 capítulos."
+
+HIPÓTESIS
+- existe una oportunidad F&B todavía no identificada
+- puede diseñarse un modelo replicable dentro del presupuesto
+- la comunidad puede aportar datos útiles
+- la IA puede reducir trabajo repetitivo y mejorar la lectura del negocio
+
+RIESGOS
+- convertir la serie en contenido sin negocio
+- enamorarse de una idea antes de investigarla
+- participación basada en gusto, no en viabilidad
+- exceso de tecnología sobre hospitalidad
+- fatiga antes de completar el modelo
+
+ESTRUCTURA PROPUESTA DE DRIVE
+PAO_SAG/
+└── NEGOCIO_F&B_DESDE_CERO/
+    ├── 00_SISTEMA_MAESTRO/
+    │   ├── ficha_maestra/
+    │   ├── reglas/
+    │   ├── fuentes/
+    │   └── expertos/
+    └── CAP_00_LANZAMIENTO/
+        ├── 01_BRIEF/
+        ├── 02_RAW_VIDEO/
+        ├── 03_RAW_PHOTO/
+        ├── 04_SCREEN_RECORDINGS/
+        ├── 05_AUDIO/
+        ├── 06_SELECTS/
+        ├── 07_FINAL/
+        └── 08_METRICAS/
+
+QUÉ VIVE DÓNDE
+HQ = memoria estratégica y decisiones.
+Herramienta de marketing = ejecución, calendario, distribución y métricas.
+Drive = archivos y evidencia pesada.
+
+CÓMO EVITAMOS DUPLICAR INFORMACIÓN
+Cada sistema es dueño de un tipo de información y no la repite: HQ referencia el Drive por ruta en vez de copiar archivos pesados, y la herramienta de marketing consulta la ficha maestra de HQ en vez de mantener su propia copia de las decisiones estratégicas.`,
+  },
+
+  {
+    title: 'Capítulo 0 — KPIs y criterio de cierre',
+    category: 'Checklists de captura',
+    tags: ['capitulo-0', 'kpi', 'documentacion'],
+    status: 'borrador',
+    source: 'Base Editorial v0.3',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: 'Capítulo 0',
+    relatedCase: '',
+    body: `KPIS
+- retención a 3 segundos
+- retención media
+- reproducciones completas
+- guardados
+- compartidos
+- visitas al perfil
+- nuevos seguidores
+- respuestas a Stories
+- DMs de dueños o expertos
+- preguntas repetidas
+
+ÉXITO CUALITATIVO
+Buscamos respuestas equivalentes a:
+- "quiero ver cómo lo hacen"
+- "tengo un negocio y esto me interesa"
+- "yo conozco a alguien que puede ayudar"
+- "en Morelia hace falta…"
+- "¿cómo van a usar IA para inventario/menú/etc.?"
+
+ESTADOS OPERATIVOS
+1. estrategia
+2. brief de producción
+3. captura
+4. edición
+5. revisión
+6. programación
+7. publicación
+8. análisis
+9. documentación
+10. cierre
+
+CRITERIO DE CIERRE
+El Capítulo 0 no está terminado hasta que:
+- Reel publicado
+- Stories publicadas
+- respuestas registradas
+- métricas guardadas
+- IA haya resumido dudas y patrones
+- HQ esté actualizado
+- pregunta del Capítulo 1 esté definida
+
+PUENTE AL CAPÍTULO 1
+Investigación real del mercado de Morelia.`,
+  },
+];
+
+/**
+ * Corpus editorial completo: V1 + V2 + V3.
  * Usar este export en el botón de carga — idempotente por título normalizado.
  */
-export const EDITORIAL_SEED_ALL = [...EDITORIAL_SEED_V1, ...EDITORIAL_SEED_V2];
+export const EDITORIAL_SEED_ALL = [...EDITORIAL_SEED_V1, ...EDITORIAL_SEED_V2, ...EDITORIAL_SEED_V3];
