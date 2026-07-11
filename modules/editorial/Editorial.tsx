@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useLanka } from '@/lib/store';
 import { EDITORIAL_CATEGORIES } from '@/lib/types';
 import type { EditorialCategory, EditorialEntry, EditorialStatus } from '@/lib/types';
-import { EDITORIAL_SEED_V1 } from '@/lib/editorialSeed';
+import { EDITORIAL_SEED_ALL } from '@/lib/editorialSeed';
 
 type FormState = Omit<EditorialEntry, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -94,7 +94,7 @@ export function Editorial() {
   function loadSeed() {
     let added = 0;
     let skipped = 0;
-    EDITORIAL_SEED_V1.forEach(seed => {
+    EDITORIAL_SEED_ALL.forEach(seed => {
       const exists = entries.some(
         e => e.title.trim().toLowerCase() === seed.title.trim().toLowerCase()
       );
@@ -182,10 +182,10 @@ export function Editorial() {
         <div className="flex items-center gap-2">
           <button
             onClick={loadSeed}
-            title="Carga las 8 entradas de la Base Editorial v0.1. Idempotente: no duplica entradas existentes."
+            title="Carga el corpus editorial completo (V1 + V2). Idempotente: omite entradas que ya existen."
             className="border border-[var(--line)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--muted)] transition-colors"
           >
-            Base v0.1
+            Base editorial
           </button>
           <button
             onClick={startAdd}

@@ -305,3 +305,253 @@ Todos asumen que el modelo tiene contexto de Lanka. Ajustar según el sistema pr
 // Agregar prompts específicos por categoría según vaya evolucionando el sistema.`,
   },
 ];
+
+/**
+ * Base Editorial v0.2 — 8 entradas de la serie "F&B desde cero AI first".
+ * Identificador de versión: EDITORIAL_SEED_V2
+ */
+export const EDITORIAL_SEED_V2: Array<Omit<EditorialEntry, 'id' | 'createdAt' | 'updatedAt'>> = [
+  {
+    title: 'El ticket de los domingos v1.0',
+    category: 'Series activas',
+    tags: ['ticket', 'domingos', 'horeca-intel', 'recomendacion', 'captura', 'morelia', 'restaurantes'],
+    status: 'borrador',
+    source: 'Base Editorial v0.2',
+    relatedSeries: 'El Ticket',
+    relatedChapter: '',
+    relatedCase: '',
+    body: `PROMESA PÚBLICA
+"Cada domingo, un ticket que valió la pena guardar."
+Recomendación personal con lectura F&B discreta.
+Solo el must de la carta, no una reseña completa.
+Muestra nombre y etiqueta del lugar.
+
+CHECKLIST NÚCLEO DE CAPTURA
+- Momento de consumo: tardeo / piqueo / cena elegante / desayuno lento / comida larga
+- Total del ticket
+- Número de personas
+- Precio por persona
+- Diferencia con/sin alcohol cuando sea material
+- Tipo de visita: primera / recurrente / habitual
+- Tipo de pago: pagado / invitación / colaboración
+
+PRODUCCIÓN
+Mix de voz en off, Paola en cámara y documentación del lugar.
+Publicación exclusiva los domingos.
+
+REGLAS DE PUBLICACIÓN
+- Invitación no garantiza publicación.
+- Revisión del formato después de los primeros 4 episodios.`,
+  },
+
+  {
+    title: 'Creando un negocio de F&B desde cero — marco AI first',
+    category: 'Series activas',
+    tags: ['serie', 'ai-first', 'f&b', 'desde-cero', 'building-in-public', 'morelia', 'negocio'],
+    status: 'borrador',
+    source: 'Base Editorial v0.2',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: '',
+    relatedCase: '',
+    body: `MARCO DE LA SERIE
+Negocio ficticio con posibilidad real de piloto o pop-up.
+Ciudad inicial: Morelia.
+Inversión máxima: $600,000 MXN.
+Modelo trasladable, replicable y escalable.
+Máximo 30 capítulos.
+
+PARTICIPANTES
+- Expertos nacionales e internacionales en decisiones vinculadas.
+- Comunidad participa en decisiones técnicamente viables.
+
+IA EN LA SERIE
+IA integrada desde el diseño del negocio, no añadida después.
+El negocio es el protagonista, no la IA.
+
+PRINCIPIO RECTOR
+IA detecta, organiza, propone y alerta.
+Humanos deciden, sirven y responden.`,
+  },
+
+  {
+    title: 'Ficha maestra del negocio',
+    category: 'Estructura madre',
+    tags: ['ficha', 'negocio', 'morelia', 'presupuesto', 'ai-first', 'decisiones', 'plantilla'],
+    status: 'borrador',
+    source: 'Base Editorial v0.2',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: '',
+    relatedCase: '',
+    body: `Fuente de verdad de ESTE negocio construido en público.
+No es una ficha genérica de clientes de Lanka.
+
+CAMPOS OBLIGATORIOS
+Ciudad · Presupuesto máximo · Estado (ficticio / piloto / pop-up)
+Oportunidad detectada · Concepto · Cliente prioritario
+Ocasión de consumo · Formato · Tamaño · Ubicación
+Ticket objetivo · Menú · Pricing
+Inversión · CAPEX · OPEX · Punto de equilibrio
+Proveedores · Operación · Equipo · Experiencia · Marca
+Tecnología · Capa IA · Automatizaciones
+Decisiones aprobadas · Hipótesis pendientes · Fallas
+Cambios de versión · Posibilidad de lanzamiento real`,
+  },
+
+  {
+    title: 'Metodología fija por capítulo',
+    category: 'Estructura madre',
+    tags: ['metodologia', 'capitulo', 'investigacion', 'evidencia', 'comunidad', 'expertos', 'ai-first'],
+    status: 'borrador',
+    source: 'Base Editorial v0.2',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: '',
+    relatedCase: '',
+    body: `FLUJO OBLIGATORIO POR CAPÍTULO
+Pregunta de negocio
+→ Investigación
+→ IA organiza y contrasta
+→ Evidencia
+→ Criterio técnico de Paola
+→ Expertos tensionan cuando aplique
+→ Opciones viables
+→ Comunidad participa
+→ Decisión
+→ Documentación
+→ Siguiente capítulo
+
+REGISTRO OBLIGATORIO POR CAPÍTULO
+- Pregunta
+- Evidencia
+- Decisión
+- Riesgo
+- Participación
+- Función de IA
+- Automatización posible
+- Límite humano
+- KPI
+- Aprendizaje
+- Próxima pregunta`,
+  },
+
+  {
+    title: 'Participación comunitaria',
+    category: 'Comunidad',
+    tags: ['comunidad', 'votacion', 'co-creacion', 'hype', 'decisiones', 'serie'],
+    status: 'borrador',
+    source: 'Base Editorial v0.2',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: '',
+    relatedCase: '',
+    body: `PRINCIPIO
+La comunidad no vota desde cero.
+Primero se investiga y se filtra; después vota entre opciones viables.
+Cada opción se presenta con oportunidad, riesgo y trade-off visibles.
+
+DÓNDE PUEDE PARTICIPAR
+Ocasión · Concepto · Productos finalistas · Naming
+Experiencia · Piloto · Detalles del proyecto
+
+DÓNDE NO DECIDE
+Sin marco de food cost, legal, sanidad, estructura financiera,
+equipos críticos ni plantilla.
+
+CÓMO SE DIRIGE
+Participación dirigida, no "¿qué opinan?"
+Se registran votos, comentarios, contradicciones e insights de cada episodio.`,
+  },
+
+  {
+    title: 'Mesa externa / participación de expertos',
+    category: 'Comunidad',
+    tags: ['mesa-externa', 'expertos', 'internacional', 'operadores', 'cafeterias', 'restaurantes'],
+    status: 'borrador',
+    source: 'Base Editorial v0.2',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: '',
+    relatedCase: '',
+    body: `PERFIL
+Amigos y expertos de otros países.
+Participación vinculada a una decisión concreta, no entrevista genérica.
+
+FORMATOS POSIBLES
+Meet · Videollamada · Revisión · Audio · Aportación escrita · Clips
+
+ÁREAS DE PARTICIPACIÓN
+Mercado · Ubicación · Menú · Café · Finanzas · Arquitectura
+Experiencia · Tecnología · Escalabilidad
+
+PREGUNTA MADRE
+¿Qué cambió entre lo que creías antes de abrir y lo que ocurrió realmente?
+
+LÍMITE
+El experto tensiona la decisión.
+No sustituye el criterio de Paola ni dirige el proyecto.`,
+  },
+
+  {
+    title: 'Arquitectura AI first del negocio',
+    category: 'Decisiones editoriales',
+    tags: ['ai-first', 'operacion', 'automatizacion', 'datos', 'negocio', 'decisiones'],
+    status: 'borrador',
+    source: 'Base Editorial v0.2',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: '',
+    relatedCase: '',
+    body: `MODELO OPERATIVO — no solo uso editorial de IA.
+
+CAPAS
+1. Captura de datos
+2. Interpretación
+3. Recomendación
+4. Aprobación humana
+5. Ejecución y aprendizaje
+
+ÁREAS CUBIERTAS
+Investigación · Finanzas · Menú · Compras · Inventario · Operación
+SOPs · Equipo · Ventas · Marketing · CRM · Experiencia
+Dirección · Escalabilidad
+
+PRINCIPIO
+Dato → lectura IA → recomendación → aprobación → acción → resultado → aprendizaje.
+
+DISTINCIONES OBLIGATORIAS
+- Qué hace IA
+- Qué se automatiza
+- Qué requiere aprobación humana
+- Qué nunca se delega`,
+  },
+
+  {
+    title: 'Output obligatorio de cada capítulo',
+    category: 'Checklists de captura',
+    tags: ['output', 'capitulo', 'checklist', 'evidencia', 'decision', 'cierre'],
+    status: 'borrador',
+    source: 'Base Editorial v0.2',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: '',
+    relatedCase: '',
+    body: `Un capítulo no está cerrado hasta que existan todos los siguientes:
+
+CHECKLIST DE CIERRE
+- Pregunta resuelta
+- Fuentes e investigación guardadas
+- Decisión documentada
+- Ficha maestra actualizada
+- Función de IA registrada
+- Automatización definida
+- Límite humano definido
+- Participación comunitaria registrada
+- Experto citado si aplica
+- Assets guardados
+- Pieza publicada o lista
+- KPI definido
+- Aprendizaje registrado
+- Siguiente pregunta definida`,
+  },
+];
+
+/**
+ * Corpus editorial completo: V1 + V2.
+ * Usar este export en el botón de carga — idempotente por título normalizado.
+ */
+export const EDITORIAL_SEED_ALL = [...EDITORIAL_SEED_V1, ...EDITORIAL_SEED_V2];
