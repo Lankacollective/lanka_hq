@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { useLanka } from '@/lib/store';
 import { EDITORIAL_CATEGORIES } from '@/lib/types';
 import type { EditorialCategory, EditorialEntry, EditorialStatus } from '@/lib/types';
+import { EDITORIAL_SEED_ALL } from '@/lib/editorialSeed';
 
 type FormState = Omit<EditorialEntry, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -31,6 +32,18 @@ const STATUS_COLOR: Record<EditorialStatus, string> = {
   archivado: 'var(--muted)',
 };
 
+// ─── Search helpers ───────────────────────────────────────────────────────────
+
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics: é→e, ú→u, ñ→n, etc.
+    .replace(/[-_]/g, ' ')           // hyphens/underscores → spaces
+    .replace(/\s+/g, ' ');           // collapse multiple spaces
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export function Editorial() {
@@ -46,6 +59,7 @@ export function Editorial() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [tagInput, setTagInput] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [seedResult, setSeedResult] = useState<{ added: number; skipped: number } | null>(null);
 
   const allTags = useMemo(() => {
     const s = new Set<string>();
@@ -59,12 +73,14 @@ export function Editorial() {
     if (statusFilter !== 'Todos') list = list.filter(e => e.status === statusFilter);
     if (tagFilter) list = list.filter(e => e.tags.includes(tagFilter));
     if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter(e =>
-        e.title.toLowerCase().includes(q) ||
-        e.body.toLowerCase().includes(q) ||
-        e.tags.some(t => t.toLowerCase().includes(q))
-      );
+      const tokens = normalizeText(search).split(' ').filter(Boolean);
+      list = list.filter(e => {
+        const haystack = normalizeText([
+          e.title, e.body, e.tags.join(' '), e.category,
+          e.source, e.relatedSeries, e.relatedChapter, e.relatedCase,
+        ].join(' '));
+        return tokens.every(token => haystack.includes(token));
+      });
     }
     return list;
   }, [entries, catFilter, statusFilter, tagFilter, search]);
@@ -74,6 +90,23 @@ export function Editorial() {
     entries.forEach(e => { m[e.category] = (m[e.category] ?? 0) + 1; });
     return m;
   }, [entries]);
+
+  function loadSeed() {
+    let added = 0;
+    let skipped = 0;
+    EDITORIAL_SEED_ALL.forEach(seed => {
+      const exists = entries.some(
+        e => e.title.trim().toLowerCase() === seed.title.trim().toLowerCase()
+      );
+      if (exists) {
+        skipped++;
+      } else {
+        addEditorial(seed);
+        added++;
+      }
+    });
+    setSeedResult({ added, skipped });
+  }
 
   function startAdd() {
     setEditingId(null);
@@ -146,13 +179,42 @@ export function Editorial() {
             Metodología, voz, series, prompts y decisiones editoriales de @pao.sag y LANKA.
           </p>
         </div>
-        <button
-          onClick={startAdd}
-          className="border border-[var(--acid)] bg-[var(--acid)] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-black hover:opacity-90 transition-opacity"
-        >
-          + Nueva entrada
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadSeed}
+            title="Carga el corpus editorial completo (V1 + V2). Idempotente: omite entradas que ya existen."
+            className="border border-[var(--line)] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--muted)] transition-colors"
+          >
+            Base editorial
+          </button>
+          <button
+            onClick={startAdd}
+            className="border border-[var(--acid)] bg-[var(--acid)] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-black hover:opacity-90 transition-opacity"
+          >
+            + Nueva entrada
+          </button>
+        </div>
       </div>
+
+      {/* ── Seed load feedback ── */}
+      {seedResult !== null && (
+        <div className="mb-4 flex items-center justify-between border border-[var(--line)] bg-[var(--surface)] px-4 py-2">
+          <p className="font-mono text-[10px] text-[var(--muted)]">
+            {seedResult.added > 0 && (
+              <span className="text-[var(--acid)]">{seedResult.added} entrada{seedResult.added !== 1 ? 's' : ''} cargada{seedResult.added !== 1 ? 's' : ''}</span>
+            )}
+            {seedResult.added > 0 && seedResult.skipped > 0 && ' · '}
+            {seedResult.skipped > 0 && `${seedResult.skipped} ya existía${seedResult.skipped !== 1 ? 'n' : ''}`}
+            {seedResult.added === 0 && seedResult.skipped === 0 && 'Sin cambios'}
+          </p>
+          <button
+            onClick={() => setSeedResult(null)}
+            className="font-mono text-[9px] uppercase text-[var(--muted)] hover:text-[var(--ink)] transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* ── Inline form (add / edit) ── */}
       {(adding || editingId !== null) && (
@@ -191,7 +253,7 @@ export function Editorial() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar en título, cuerpo o tags..."
+          placeholder="Buscar en todos los campos..."
           className="min-w-[220px] flex-1 border border-[var(--line)] bg-[var(--surface)] px-3 py-2 font-mono text-[11px] text-[var(--ink)] outline-none focus:border-[var(--acid)] placeholder:text-[var(--muted)]"
         />
         <select
