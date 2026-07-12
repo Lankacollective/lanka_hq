@@ -1064,6 +1064,81 @@ El Capítulo 0 no está terminado hasta que:
 PUENTE AL CAPÍTULO 1
 Investigación real del mercado de Morelia.`,
   },
+
+  {
+    title: 'Capítulo 0 — Regla de evidencia real y documentación del proceso',
+    category: 'Decisiones editoriales',
+    tags: ['capitulo-0', 'evidencia', 'documentacion', 'ai-first', 'produccion', 'credibilidad', 'proceso-real'],
+    status: 'borrador',
+    source: 'Base Editorial v0.3',
+    relatedSeries: 'F&B desde cero',
+    relatedChapter: 'Capítulo 0',
+    relatedCase: '',
+    body: `PRINCIPIO CENTRAL
+
+Nunca se graba o escenifica una prueba para hacer parecer que el proceso ya ocurrió.
+
+Se documenta el proceso real mientras sucede.
+Después se decide qué parte merece convertirse en contenido.
+
+REGLAS
+
+- Cada evidencia debe corresponder al momento real de la serie.
+- No se presentan hipótesis descartadas antes de tener una razón verificable para descartarlas.
+- No se muestran conclusiones de mercado antes de haber hecho investigación suficiente.
+- No se presenta una tabla vacía como si fuera análisis terminado.
+- No se presenta una conversación con un experto si la conversación no ocurrió realmente.
+- No se presenta una clasificación de respuestas antes de recibir respuestas reales.
+- La IA puede ordenar, resumir y detectar patrones, pero no debe transformar señales débiles en conclusiones.
+- Siempre distinguir entre:
+  1. evidencia;
+  2. contexto visual;
+  3. supuesto;
+  4. inferencia;
+  5. decisión.
+
+ACLARACIONES
+
+- El mapa de Morelia es una restricción real y puede aparecer desde el Capítulo 0.
+- Los tickets personales pueden aparecer como textura visual y contexto, pero no constituyen una muestra representativa del mercado.
+- La ficha maestra con campos "pendiente" demuestra honestamente que el concepto todavía no está decidido.
+- Una pregunta enviada a un operador puede mostrarse únicamente si fue realmente enviada y se protegen datos privados.
+- Una hipótesis tachada debe aparecer solo cuando exista evidencia o criterio documentado para descartarla.
+- La pantalla donde se clasifican respuestas aparece después del lanzamiento, cuando ya existan respuestas reales.
+
+SEPARACIÓN POR MOMENTO
+
+CAPÍTULO 0:
+- mapa real de Morelia;
+- presupuesto máximo de $600,000 MXN;
+- ficha maestra con campos pendientes;
+- LANKA HQ;
+- referencias iniciales;
+- primera pregunta real enviada a un operador, si ocurre.
+
+DESPUÉS DEL LANZAMIENTO:
+- respuestas reales;
+- clasificación con IA;
+- preguntas repetidas;
+- contradicciones;
+- primeras hipótesis.
+
+CAPÍTULOS POSTERIORES:
+- ideas descartadas;
+- hipótesis tachadas;
+- modelos financieros;
+- menu engineering;
+- food cost;
+- benchmarks;
+- ubicaciones;
+- pruebas de producto;
+- decisiones documentadas.
+
+REGLA FINAL
+
+Nunca fabricamos evidencia para contar una historia.
+Grabamos la historia mientras ocurre.`,
+  },
 ];
 
 /**
